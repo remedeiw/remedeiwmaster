@@ -8,6 +8,9 @@ verify_ssl = true
 [packages]
 numpy = "*"
 jupyterlab = "*"
+pandas = "*"
+matplotlib = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.8"

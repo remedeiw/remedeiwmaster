@@ -11,6 +11,7 @@ jupyterlab = "*"
 pandas = "*"
 matplotlib = "*"
 scipy = "*"
+xlrd = "*"
 
 [requires]
 python_version = "3.8"

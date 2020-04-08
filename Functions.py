@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def plotdataframecontrolenergy(dataframe, posorneg):
@@ -87,4 +88,32 @@ def kumuliereprofile(dataframe, profilenumbers):
         dataframe['Summe'] = dataframe['Summe'] + dataframe[profil]
 
     return dataframe
+
+
+def plotchargecapacity(model):
+    # X Achse 2. Plot neu beschriften
+    plt.figure(figsize=(16, 5))
+    model.logdata['chargecapacity'].plot()
+    model.logdata['chargecapacityusedbypv'].plot()
+    model.logdata['chargecapacityusedbycontrolenergyprl'].plot()
+    model.logdata['chargecapacityusedbycontrolenergysrl'].plot()
+    legend = plt.legend(loc='upper left', frameon=False)
+    plt.axhline(y=0, color='pink')
+    plt.axhline(y=model.capacityofenergystorage, color='pink')
+    plt.xticks(rotation=15)
+    plt.ylabel('Charge Capacity')
+    plt.figure(figsize=(16, 5))
+    plt.stackplot(model.logdata.index, model.logdata['chargecapacityusedbypv'],
+    model.logdata['chargecapacityusedbycontrolenergyprl'],
+    model.logdata['chargecapacityusedbycontrolenergysrl'], labels=['PV', 'PRL', 'SRL'],
+            baseline="zero")
+    # plt.stackplot(model.logdata.index ,model.logdata['chargecapacityusedbycontrolenergyprl'], model.logdata['chargecapacityusedbycontrolenergysrl'], model.logdata['chargecapacityusedbypv'], labels=['PRL','SRL','PV'], baseline="zero")
+    plt.axhline(y=0, color='pink')
+    plt.axhline(y=model.capacityofenergystorage, color='pink')
+    plt.xticks(np.arange(1, len(model.logdata.index), step=100), [], rotation=15)
+    legend = plt.legend(loc='upper left', frameon=False)
+    plt.ylabel('Charge Capacity')
+    #plt.xticks(locs,labels, rotation=15)
+    #locs, labels = plt.xticks()
+
 

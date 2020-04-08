@@ -6,7 +6,7 @@ Die Klasse Model dient zur Simulation.
 
 __init__
 Der Kinstruktor übergibt alle relevabteb Datensätze und erstellt eine Logdatei. In der Logdateil sollen während der
-Simulation alle werde berechnet werden und direkt die Logdatei als DF manipuliert werden.
+Simulation alle Werte berechnet werden und direkt die Logdatei als DF manipuliert werden.
 
 run
 Die run Methode soll verwendet werden um die Simulation durchzuführen.
@@ -16,6 +16,9 @@ update das dataframe mit dem input pvleistung und lastprofil im bezug auf verwen
 
 setdecisionpoint
 schreibt in logdatei decisionpoint und typeofdecision
+
+decisionhandler
+erhält Antwort von Agent und führt sie auf logdatei aus
 '''
 
 
@@ -28,6 +31,7 @@ class Model:
         self.dataloadprofiles['Summe'] = self.dataloadprofiles['Summe'] * 60 / 3600000
         # PV daten in KW auf 1 KW Peak ursprünglich stündlich Auflösung <<< umrechung auf KWH
         pvdata['pvpower'] = pvdata['electricity'] * numberofhouseswithpv * capacityofpvs * 900 / 3600
+        # setzen von start parameter
         self.pvdata = pvdata
         self.capacityofenergystorage = capacityofenergystorage
         indexlogdata = dataloadprofiles.index
@@ -51,15 +55,16 @@ class Model:
 
         # Berrechung für PV-Leistung
         self.updatecapacityusedbypv()
-        self.updatechargecapacity()
+        # self.updatechargecapacity()
         # Agenten
         for i in range(0, len(self.logdata)):
             if self.logdata.loc[i, 'decisionpoint']:
                 # self.agent.getdecision(i, str(self.logdata[i, 'typeofdecision']))
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
-                                     self.agent.getdecision(i, self.logdata.loc[i, 'typeofdecision']))
+                                     self.agent.getdecision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
+                                                            logdata=self.logdata))
         # neu Berrechnung für PV
-        self.updatechargecapacity()
+        # self.updatechargecapacity()
         self.updatecapacityusedbypv()
         self.updatechargecapacity()
         # setzte Index
@@ -77,6 +82,17 @@ class Model:
                 self.logdata.loc[i, 'chargecapacityusedbypv'] = max(
                     self.logdata.iloc[i - 1]['chargecapacityusedbypv'] - self.logdata.iloc[i]['netenergydemand'], 0)
                 self.logdata.loc[i, 'feedingrid'] = 0
+                if self.logdata.loc[i, 'chargecapacityusedbypv'] + self.logdata.loc[
+                    i, 'chargecapacityusedbycontrolenergyprl'] + self.logdata.loc[
+                    i, 'chargecapacityusedbycontrolenergysrl'] > self.capacityofenergystorage:
+                    excess = self.logdata.loc[i, 'chargecapacityusedbypv'] + self.logdata.loc[
+                        i, 'chargecapacityusedbycontrolenergyprl'] + self.logdata.loc[
+                                 i, 'chargecapacityusedbycontrolenergysrl'] - self.capacityofenergystorage
+                    self.logdata.loc[i, 'chargecapacityusedbypv'] = self.logdata.loc[
+                                                                        i, 'chargecapacityusedbypv'] - excess
+                    self.logdata.loc[i, 'feedingrid'] = excess - self.logdata.loc[i, 'drawfromgrid']
+                    self.logdata.loc[i, 'drawfromgrid'] = 0
+
             else:
                 self.logdata.loc[i, 'feedingrid'] = max(abs(self.logdata.iloc[i]['netenergydemand']) - (
                         self.capacityofenergystorage - self.logdata.loc[i - 1, 'chargecapacityusedbypv'] -
@@ -89,6 +105,7 @@ class Model:
                 self.logdata.loc[i, 'drawfromgrid'] = 0
 
     def updatechargecapacity(self):
+        # der Wert Chargecapacity findet im Model keine Verwendung, lediglich zu späteren Auswertung.
         self.logdata['chargecapacity'] = self.logdata['chargecapacityusedbypv'] + self.logdata[
             'chargecapacityusedbycontrolenergyprl'] + self.logdata['chargecapacityusedbycontrolenergysrl']
 

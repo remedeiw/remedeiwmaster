@@ -64,11 +64,13 @@ def viertelstundentakt(dataframe):
 
 def getdata(timestart, timeende):
     datafcr = pd.read_csv('Data/datafcr2019.csv', index_col='DATE_TO')
-    dataafrr = pd.read_csv('Data/dataafrr2019.csv', index_col='DATE_TO')
+    dataafrr = pd.read_csv('Data/dataafrr2019.csv')
     datamfrr = pd.read_csv('Data/datamfrr2019.csv', index_col='DATE_TO')
     datalastprofile = pd.read_csv('Data/lastprofile.csv', index_col='time')
     pvdata = pd.read_csv('Data/pvdata.csv', index_col='timestamp')
     dataprice = pd.read_csv('Data/Gro_handelspreise_2019.csv', index_col='timestamp')
+
+    dataafrr = dataafrr.set_index(['DATE_TO', 'PRODUCT'])
 
     datafcr = datafcr.loc['2019-' + timestart:'2019-' + timeende]
     dataafrr = dataafrr.loc['2019-' + timestart:'2019-' + timeende]
@@ -93,10 +95,10 @@ def kumuliereprofile(dataframe, profilenumbers):
 def plotchargecapacity(model):
     # X Achse 2. Plot neu beschriften
     plt.figure(figsize=(16, 5))
-    model.logdata['chargecapacity'].plot()
-    model.logdata['chargecapacityusedbypv'].plot()
-    model.logdata['chargecapacityusedbycontrolenergyprl'].plot()
-    model.logdata['chargecapacityusedbycontrolenergysrl'].plot()
+    model.logdata['chargecapacity'].plot(color='red')
+    model.logdata['chargecapacityusedbypv'].plot(color='blue')
+    model.logdata['chargecapacityusedbycontrolenergyprl'].plot(color='orange')
+    model.logdata['chargecapacityusedbycontrolenergysrl'].plot(color='green')
     legend = plt.legend(loc='upper left', frameon=False)
     plt.axhline(y=0, color='pink')
     plt.axhline(y=model.capacityofenergystorage, color='pink')

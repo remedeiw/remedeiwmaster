@@ -23,7 +23,7 @@ erhält Antwort von Agent und führt sie auf logdatei aus
 
 
 class Model:
-    def __init__(self, dataloadprofiles, listoflastprofiles, pvdata, numberofhouseswithpv, capacityofpvs,
+    def __init__(self, dataloadprofiles, listoflastprofiles, dataafrr, datafcr, pvdata, numberofhouseswithpv, capacityofpvs,
                  capacityofenergystorage, agent):
         self.agent = agent
         self.dataloadprofiles = Func.kumuliereprofile(dataloadprofiles, listoflastprofiles)
@@ -31,7 +31,9 @@ class Model:
         self.dataloadprofiles['Summe'] = self.dataloadprofiles['Summe'] * 60 / 3600000
         # PV daten in KW auf 1 KW Peak ursprünglich stündlich Auflösung <<< umrechung auf KWH
         pvdata['pvpower'] = pvdata['electricity'] * numberofhouseswithpv * capacityofpvs * 900 / 3600
-        # setzen von start parameter
+        # setzen von start daten
+        self.dataafrr = dataafrr
+        self.datafcr = datafcr
         self.pvdata = pvdata
         self.capacityofenergystorage = capacityofenergystorage
         indexlogdata = dataloadprofiles.index
@@ -48,6 +50,7 @@ class Model:
         self.setdecisionpoint()
         self.logdata = self.logdata.set_index('timestamp')
         self.logdata['netenergydemand'] = self.dataloadprofiles['Summe'] - self.pvdata['pvpower']
+        self.logdata['energydemandnopv'] = self.dataloadprofiles['Summe']
 
     def run(self):
         # reindex zu besseren ansprechung über .loc am Ende zurück
@@ -175,3 +178,53 @@ class Model:
             if index + 420 < len(self.logdata):
                 for i in range(index + 324, index + 420):
                     self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = reply[1]
+
+
+    def cutlogdatei(self, start= 192, end= 96):
+        self.logdata = self.logdata.reset_index()
+        self.logdata = self.logdata.loc[start:len(self.logdata) - end]
+        self.logdata = self.logdata.set_index('timestamp')
+
+
+    def evaluaterevenuestream(self):
+        self.logdata = self.logdata.reset_index()
+        self.logdata['drawfromgridcumsum'] = self.logdata['drawfromgrid'].cumsum()
+        self.logdata['feedingridcumsum'] = self.logdata['feedingrid'].cumsum()
+        totalenergydemand = self.logdata['energydemandnopv'].sum()
+        valueselfconsumption = (totalenergydemand - self.logdata['drawfromgrid'].sum()) * 0.30
+        valuefeedingrid = self.logdata['feedingrid'].sum() * 0.10
+        valuechargecapacity = self.logdata.loc[len(self.logdata) - 1]['chargecapacityusedbypv'] * 0.30
+
+        valuesrlcontrolenergy = 0
+        productsneg = ['NEG_00_04', 'NEG_04_08', 'NEG_08_12', 'NEG_12_16', 'NEG_16_20', 'NEG_20_24']
+
+        for counter, i in enumerate(range(0,len(self.logdata),16)):
+            timestamp = self.logdata.loc[i, 'timestamp']
+            # ANSPASSUNG: Hier wird die Jahreszahl des Zeittempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
+            # Aktueller Datensatz Preise von 2019.
+            timestamp = '2019' + timestamp[4:10]
+            product = productsneg[counter % 6]
+            valuesrlcontrolenergy = valuesrlcontrolenergy + self.dataafrr.loc[timestamp, product]['TOTAL_AVERAGE_CAPACITY_PRICE_[EUR/MW]'] / 250 * self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl']
+
+
+        valueprlcontrolenergy = 0
+
+        for counter, i in enumerate(range(0,len(self.logdata),4 * 24)):
+            timestamp = self.logdata.loc[i, 'timestamp']
+            # ANSPASSUNG: Hier wird die Jahreszahl des Zeittempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
+            # Aktueller Datensatz Preise von 2019.
+            timestamp = '2019' + timestamp[4:10]
+            valueprlcontrolenergy = valueprlcontrolenergy + self.datafcr.loc[timestamp]['DE_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'] /250 /2 * self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl']
+
+        valuesumme = valueprlcontrolenergy + valuesrlcontrolenergy + valuefeedingrid + valuechargecapacity + valueselfconsumption
+        self.logdata = self.logdata.set_index('timestamp')
+
+        return [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy , valueprlcontrolenergy, valuesumme]
+
+
+
+
+
+
+
+

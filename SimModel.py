@@ -1,5 +1,6 @@
 import Functions as Func
 import pandas as pd
+import copy
 
 '''
 Die Klasse Model dient zur Simulation. 
@@ -52,7 +53,7 @@ class Model:
         self.logdata['netenergydemand'] = self.dataloadprofiles['Summe'] - self.pvdata['pvpower']
         self.logdata['energydemandnopv'] = self.dataloadprofiles['Summe']
 
-    def run(self):
+    def run(self, ignoreprldecision=False, ignoresrldecision=False):
         # reindex zu besseren ansprechung über .loc am Ende zurück
         self.logdata = self.logdata.reset_index()
 
@@ -61,11 +62,15 @@ class Model:
         # self.updatechargecapacity()
         # Agenten
         for i in range(0, len(self.logdata)):
-            if self.logdata.loc[i, 'decisionpoint']:
+            if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'PRL' and not ignoreprldecision:
+                self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
+                                     self.agent.getdecision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
+                                                            logdata=self.logdata, copymodel=copy.deepcopy(self)))
+            if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'SRL' and not ignoresrldecision:
                 # self.agent.getdecision(i, str(self.logdata[i, 'typeofdecision']))
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
                                      self.agent.getdecision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
-                                                            logdata=self.logdata))
+                                                            logdata=self.logdata, copymodel=copy.deepcopy(self)))
         # neu Berrechnung für PV
         # self.updatechargecapacity()
         self.updatecapacityusedbypv()

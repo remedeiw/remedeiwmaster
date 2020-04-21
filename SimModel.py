@@ -52,10 +52,9 @@ class Model:
         self.logdata = self.logdata.set_index('timestamp')
         self.logdata['netenergydemand'] = self.dataloadprofiles['Summe'] - self.pvdata['pvpower']
         self.logdata['energydemandnopv'] = self.dataloadprofiles['Summe']
-
-    def run(self, ignoreprldecision=False, ignoresrldecision=False):
-        # reindex zu besseren ansprechung über .loc am Ende zurück
         self.logdata = self.logdata.reset_index()
+
+    def run(self, ignoreprldecision=False, ignoresrldecision=False, showprogress=False):
 
         # Berrechung für PV-Leistung
         self.updatecapacityusedbypv()
@@ -66,17 +65,21 @@ class Model:
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
                                      self.agent.getdecision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
                                                             logdata=self.logdata, copymodel=copy.deepcopy(self)))
+                self.updatecapacityusedbypv()
             if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'SRL' and not ignoresrldecision:
                 # self.agent.getdecision(i, str(self.logdata[i, 'typeofdecision']))
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
                                      self.agent.getdecision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
                                                             logdata=self.logdata, copymodel=copy.deepcopy(self)))
+            if i % (len(self.logdata) // 10) == 0 and showprogress:
+            #if showprogress:
+                print(i / len(self.logdata))
+
+
         # neu Berrechnung für PV
         # self.updatechargecapacity()
         self.updatecapacityusedbypv()
         self.updatechargecapacity()
-        # setzte Index
-        self.logdata = self.logdata.set_index('timestamp')
 
     def updatecapacityusedbypv(self):
         # Fall unterscheidung pv größer Bedarf vs kleiner >> Anpassung Speicher und +- Grid
@@ -185,14 +188,12 @@ class Model:
                     self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = reply[1]
 
 
-    def cutlogdatei(self, start= 192, end= 96):
-        self.logdata = self.logdata.reset_index()
+    def cutlogdatei(self, start= 192, end= 97):
         self.logdata = self.logdata.loc[start:len(self.logdata) - end]
-        self.logdata = self.logdata.set_index('timestamp')
 
 
     def evaluaterevenuestream(self):
-        self.logdata = self.logdata.reset_index()
+        self.logdata = self.logdata.reset_index(drop=True)
         self.logdata['drawfromgridcumsum'] = self.logdata['drawfromgrid'].cumsum()
         self.logdata['feedingridcumsum'] = self.logdata['feedingrid'].cumsum()
         totalenergydemand = self.logdata['energydemandnopv'].sum()
@@ -222,11 +223,8 @@ class Model:
             valueprlcontrolenergy = valueprlcontrolenergy + self.datafcr.loc[timestamp]['DE_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'] /250 /2 * self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl']
 
         valuesumme = valueprlcontrolenergy + valuesrlcontrolenergy + valuefeedingrid + valuechargecapacity + valueselfconsumption
-        self.logdata = self.logdata.set_index('timestamp')
 
         return [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy , valueprlcontrolenergy, valuesumme]
-
-
 
 
 

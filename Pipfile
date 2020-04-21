@@ -12,6 +12,7 @@ pandas = "*"
 matplotlib = "*"
 scipy = "*"
 xlrd = "*"
+tqdm = "*"
 
 [requires]
 python_version = "3.8"

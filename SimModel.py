@@ -74,7 +74,7 @@ class Model:
                                                              logdata=self.logdata, copymodel=copy.deepcopy(self)))
             if i % (len(self.logdata) // 10) == 0 and showprogress:
             #if showprogress:
-                print(i / len(self.logdata))
+                print("Progress: " + str(int(i / len(self.logdata) * 100)) + "%")
 
 
         # neu Berrechnung für PV
@@ -189,7 +189,7 @@ class Model:
                     self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = reply[1]
 
 
-    def cutlogdatei(self, start= 192, end= 97):
+    def cutlogdatei(self, start= 192, end= 289):
         self.logdata = self.logdata.loc[start:len(self.logdata) - end]
 
 

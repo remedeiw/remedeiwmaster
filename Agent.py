@@ -3,12 +3,12 @@ import SimModel
 
 
 class superagent():
-    def getdecision(self, index, typeofdecision, logdata, copymodel):
+    def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
         pass
 
 
 class agentnopv(superagent):
-    def getdecision(self, index, typeofdecision, logdata, copymodel):
+    def get_decision(self, index, typeofdecision, logdata, copymodel):
         if typeofdecision == "SRL":
             decision = [0, 0, 0, 0, 0, 0]
         if typeofdecision == "PRL1":
@@ -21,7 +21,7 @@ class agentnopv(superagent):
 
 
 class agentmanualinput(superagent):
-    def getdecision(self, index, typeofdecision, logdata, copymodel):
+    def get_decision(self, index, typeofdecision, logdata, copymodel):
         if typeofdecision == "SRL":
             eingabe1 = int(input(str(index) + " 00_04 " + str(typeofdecision)))
             eingabe2 = int(input(str(index) + " 04_08 " + str(typeofdecision)))
@@ -51,12 +51,12 @@ class agentoccupancyrate(superagent):
         self.srlsteps = [64, 80, 96, 112, 128, 144, 160]
         self.prlsteps = [132, 228, 324, 420]
 
-    def getdecision(self, index, typeofdecision, logdata, copymodel):
+    def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
         if typeofdecision == "SRL" and index + self.srlsteps[6] < len(logdata):
             decision = [0, 0, 0, 0, 0, 0]
             for i in range(0, 6):
                 data = logdata.iloc[index + self.srlsteps[i]: index + self.srlsteps[i + 1]]
-                decision[i] =max(self.capacityofenergystorage - math.ceil(
+                decision[i] = max(self.capacityofenergystorage - math.ceil(
                     data['chargecapacityusedbypv'].max() + data['chargecapacityusedbycontrolenergyprl'].max()),0)
         else:
             decision = [0, 0, 0, 0, 0, 0]
@@ -88,15 +88,39 @@ class agentoccupancyrate(superagent):
         return decision
 
 
+class agentoptimizevalocc(superagent):
+    def __init__(self, capacityofenergystorage):
+        self.occagent = agentoccupancyrate(capacityofenergystorage)
+    def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
+        decision = self.occagent.get_decision(index, typeofdecision, logdata, copymodel)
+        self.srlsteps = [64, 80, 96, 112, 128, 144, 160]
+        self.prlsteps = [132, 228, 324, 420]
+
+        if typeofdecision == "PRL1":
+            pass
+
+        return decision
+
+
+    def find_next_sunrise(self, start, logdata):
+        while logdata.loc[start,'pvpower'] <= 0:
+            start = start + 1
+        return start
+
+
+
+
+
+
 class agentoptimizevalue(superagent):
     def __init__(self, step=1):
         self.step=step
-    def getdecision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
+    def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
         modelagent = agentoccupancyrate(copymodel.capacityofenergystorage)
         self.copymodel = copymodel
         self.copymodel.agent = modelagent
         if typeofdecision[:3] == "PRL":
-            decision = modelagent.getdecision(index, typeofdecision, logdata, copymodel)
+            decision = modelagent.get_decision(index, typeofdecision, logdata, copymodel)
             self.copymodel.decisionhandler(index, typeofdecision, decision)
             self.copymodel.run(ignoreprldecision=True)
             value = self.copymodel.evaluaterevenuestream()[5]
@@ -115,6 +139,6 @@ class agentoptimizevalue(superagent):
                 decision[i] = max(decision[i] - self.step, 0)
 
         if typeofdecision == "SRL":
-            decision = modelagent.getdecision(index, typeofdecision, logdata, copymodel)
+            decision = modelagent.get_decision(index, typeofdecision, logdata, copymodel)
 
         return decision

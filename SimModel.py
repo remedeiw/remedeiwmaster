@@ -51,6 +51,7 @@ class Model:
         self.setdecisionpoint()
         self.logdata = self.logdata.set_index('timestamp')
         self.logdata['netenergydemand'] = self.dataloadprofiles['Summe'] - self.pvdata['pvpower']
+        self.logdata['pvpower'] = self.pvdata['pvpower']
         self.logdata['energydemandnopv'] = self.dataloadprofiles['Summe']
         self.logdata = self.logdata.reset_index()
 
@@ -63,14 +64,14 @@ class Model:
         for i in range(0, len(self.logdata)):
             if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'PRL' and not ignoreprldecision:
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
-                                     self.agent.getdecision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
-                                                            logdata=self.logdata, copymodel=copy.deepcopy(self)))
+                                     self.agent.get_decision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
+                                                             logdata=self.logdata, copymodel=copy.deepcopy(self)))
                 self.updatecapacityusedbypv()
             if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'SRL' and not ignoresrldecision:
                 # self.agent.getdecision(i, str(self.logdata[i, 'typeofdecision']))
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
-                                     self.agent.getdecision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
-                                                            logdata=self.logdata, copymodel=copy.deepcopy(self)))
+                                     self.agent.get_decision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
+                                                             logdata=self.logdata, copymodel=copy.deepcopy(self)))
             if i % (len(self.logdata) // 10) == 0 and showprogress:
             #if showprogress:
                 print(i / len(self.logdata))

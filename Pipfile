@@ -12,7 +12,7 @@ pandas = "*"
 matplotlib = "*"
 scipy = "*"
 xlrd = "*"
-tqdm = "*"
+noise = {path = "C:/Users/maxim/Downloads/noise-1.2.3-cp38-cp38-win32.whl"}
 
 [requires]
 python_version = "3.8"

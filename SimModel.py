@@ -62,23 +62,24 @@ class Model:
         # self.updatechargecapacity()
         # Agenten
         for i in range(0, len(self.logdata)):
+            # PRL Entscheidungen
             if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'PRL' and not ignoreprldecision:
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
                                      self.agent.get_decision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
                                                              logdata=self.logdata, copymodel=copy.deepcopy(self)))
                 self.updatecapacityusedbypv()
+            # SRL Entscheidungen
             if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'SRL' and not ignoresrldecision:
                 # self.agent.getdecision(i, str(self.logdata[i, 'typeofdecision']))
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
                                      self.agent.get_decision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
                                                              logdata=self.logdata, copymodel=copy.deepcopy(self)))
             if i % (len(self.logdata) // 10) == 0 and showprogress:
-            #if showprogress:
                 print("Progress: " + str(int(i / len(self.logdata) * 100)) + "%")
 
 
-        # neu Berrechnung für PV
-        # self.updatechargecapacity()
+        # Update am Ende der Simulation
+
         self.updatecapacityusedbypv()
         self.updatechargecapacity()
 

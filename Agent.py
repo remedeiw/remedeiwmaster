@@ -182,7 +182,6 @@ class Agenttest(Superagent):
             result = True
         else:
             result = False
-        print(result)
         return result
 
     def find_next_sunrise(self, start, logdata):

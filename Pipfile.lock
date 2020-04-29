@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "409adfd73ed10dcb2a8548bf682ea04cf98c65e0c5bb8f6250b643abe1ceacb1"
+            "sha256": "4f304d8da082e50ff24dfacf6adc87b17e63bfcfa256b285da6701b9415cd4cf"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -159,11 +159,11 @@
         },
         "jupyterlab": {
             "hashes": [
-                "sha256:6663eed77b10d567499ab998eb71dabb510572f7337ec8efc48ed56cd37f9c5f",
-                "sha256:8c239aababf5baa0b3d36e375fddeb9fd96f3a9a24a8cda098d6a414f5bbdc81"
+                "sha256:2dec7e509ffa3892c67d9ac7c89d7c6a860c151d969d89420d9e20e753b2fb29",
+                "sha256:36948d2a42376e186cb5358076d0c3c49b98dfed006c99d0c98561d0e491c4fa"
             ],
             "index": "pypi",
-            "version": "==2.1.0"
+            "version": "==2.1.1"
         },
         "jupyterlab-server": {
             "hashes": [
@@ -271,6 +271,13 @@
                 "sha256:276343c78a9660ab2a63c28cc33da5f7c58c092b3f3a40b6017ae2ce6689320d"
             ],
             "version": "==5.0.6"
+        },
+        "noise": {
+            "hashes": [
+                "sha256:6c5c7b4417921897e0850799fdc06fad7b82bad6426ee0fbab1c27db8ca43f19"
+            ],
+            "path": "C:/Users/maxim/Downloads/noise-1.2.3-cp38-cp38-win32.whl",
+            "version": "==1.2.3"
         },
         "notebook": {
             "hashes": [
@@ -537,14 +544,6 @@
                 "sha256:c98232a3ac391f5faea6821b53db8db461157baa788f5d6222a193e9456e1740"
             ],
             "version": "==6.0.4"
-        },
-        "tqdm": {
-            "hashes": [
-                "sha256:00339634a22c10a7a22476ee946bbde2dbe48d042ded784e4d88e0236eca5d81",
-                "sha256:ea9e3fd6bd9a37e8783d75bfc4c1faf3c6813da6bd1c3e776488b41ec683af94"
-            ],
-            "index": "pypi",
-            "version": "==4.45.0"
         },
         "traitlets": {
             "hashes": [

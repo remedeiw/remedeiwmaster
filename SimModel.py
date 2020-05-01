@@ -1,6 +1,9 @@
 import Functions as Func
 import pandas as pd
+import numpy as np
 import copy
+import noise
+import random
 
 '''
 Die Klasse Model dient zur Simulation. 
@@ -55,28 +58,37 @@ class Model:
         self.logdata['energydemandnopv'] = self.dataloadprofiles['Summe']
         self.logdata = self.logdata.reset_index()
 
-    def run(self, ignoreprldecision=False, ignoresrldecision=False, showprogress=False):
+    def run(self, ignoreprldecision=False, ignoresrldecision=False, showprogress=False, runwithnoise=False):
 
         # Berrechung für PV-Leistung
         self.updatecapacityusedbypv()
         # self.updatechargecapacity()
         # Agenten
         for i in range(0, len(self.logdata)):
+            if self.logdata.loc[i, 'decisionpoint']:
+                if runwithnoise:
+                    logdatacopy = copy.copy(self.logdata)
+                    # Hier einfügen noise auf logdatacopy
+                    if self.logdata.iloc[i, 'typeofdecision'] == "SRL" or self.logdata.iloc[i, 'typeofdecision'] == "PRL1":
+                        pass
+                    if self.logdata.iloc[i, 'typeofdecision'] == "PRL2" or self.logdata.iloc[i, 'typeofdecision'] == "PRL3":
+                        pass
+                else:
+                    logdatacopy = copy.copy(self.logdata)
             # PRL Entscheidungen
             if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'PRL' and not ignoreprldecision:
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
                                      self.agent.get_decision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
-                                                             logdata=self.logdata, copymodel=copy.deepcopy(self)))
+                                                             logdata=logdatacopy, copymodel=copy.deepcopy(self)))
                 self.updatecapacityusedbypv()
             # SRL Entscheidungen
             if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'SRL' and not ignoresrldecision:
                 # self.agent.getdecision(i, str(self.logdata[i, 'typeofdecision']))
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
                                      self.agent.get_decision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
-                                                             logdata=self.logdata, copymodel=copy.deepcopy(self)))
+                                                             logdata=logdatacopy, copymodel=copy.deepcopy(self)))
             if i % (len(self.logdata) // 10) == 0 and showprogress:
                 print("Progress: " + str(int(i / len(self.logdata) * 100)) + "%")
-
 
         # Update am Ende der Simulation
 
@@ -189,10 +201,8 @@ class Model:
                 for i in range(index + 324, index + 420):
                     self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = reply[1]
 
-
-    def cutlogdatei(self, start= 192, end= 289):
+    def cutlogdatei(self, start=192, end=289):
         self.logdata = self.logdata.loc[start:len(self.logdata) - end]
-
 
     def evaluaterevenuestream(self):
         self.logdata = self.logdata.reset_index(drop=True)
@@ -206,30 +216,68 @@ class Model:
         valuesrlcontrolenergy = 0
         productsneg = ['NEG_00_04', 'NEG_04_08', 'NEG_08_12', 'NEG_12_16', 'NEG_16_20', 'NEG_20_24']
 
-        for counter, i in enumerate(range(0,len(self.logdata),16)):
+        for counter, i in enumerate(range(0, len(self.logdata), 16)):
             timestamp = self.logdata.loc[i, 'timestamp']
             # ANSPASSUNG: Hier wird die Jahreszahl des Zeittempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
             # Aktueller Datensatz Preise von 2019.
             timestamp = '2019' + timestamp[4:10]
             product = productsneg[counter % 6]
-            valuesrlcontrolenergy = valuesrlcontrolenergy + self.dataafrr.loc[timestamp, product]['TOTAL_AVERAGE_CAPACITY_PRICE_[EUR/MW]'] / 250 * self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl']
-
+            valuesrlcontrolenergy = valuesrlcontrolenergy + self.dataafrr.loc[timestamp, product][
+                'TOTAL_AVERAGE_CAPACITY_PRICE_[EUR/MW]'] / 250 * self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl']
 
         valueprlcontrolenergy = 0
 
-        for counter, i in enumerate(range(0,len(self.logdata),4 * 24)):
+        for counter, i in enumerate(range(0, len(self.logdata), 4 * 24)):
             timestamp = self.logdata.loc[i, 'timestamp']
             # ANSPASSUNG: Hier wird die Jahreszahl des Zeittempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
             # Aktueller Datensatz Preise von 2019.
             timestamp = '2019' + timestamp[4:10]
-            valueprlcontrolenergy = valueprlcontrolenergy + self.datafcr.loc[timestamp]['DE_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'] /250 /2 * self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl']
+            valueprlcontrolenergy = valueprlcontrolenergy + self.datafcr.loc[timestamp]['DE_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'] / 250 / 2 * \
+                                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl']
 
         valuesumme = valueprlcontrolenergy + valuesrlcontrolenergy + valuefeedingrid + valuechargecapacity + valueselfconsumption
 
-        return [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy , valueprlcontrolenergy, valuesumme]
+        return [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy, valueprlcontrolenergy, valuesumme]
 
+    def def_noise(self, typeofnoice, stdlongpv, stdshortpv, stdlonglast, stdshortlast, logdata):
+        if typeofnoice == "perlin":
+            base = random.randrange(1, 10000, 100)
+            octaves = 5
+            points = len(logdata)
+            span = 15
+            df = pd.DataFrame({'A': [np.nan]})
 
+            logdata['errorpvlong'] = 0
+            logdata['errorpvshort'] = 0
 
+            for i in range(len(logdata)):
+                x = float(i) * span / (points) - 0.5 * span
+                y = noise.pnoise1(x + base, octaves) / 20 * stdlongpv * 100
+                df = df.append({'A': y}, ignore_index=True)
+            logdata['errorpvlong'] = df['A']
+            logdata['errorpvshort'] = df['A'] / stdlongpv * stdshortpv
+            base = random.randrange(1, 10000, 100)
+            logdata['errorlastlong'] = 0
+            logdata['errorlastshort'] = 0
 
+            df = pd.DataFrame({'B': [np.nan]})
 
+            for i in range(len(logdata)):
+                x = float(i) * span / (points) - 0.5 * span
+                y = noise.pnoise1(x + base, octaves) / 20 * stdlonglast * 100
+                df = df.append({'B': y}, ignore_index=True)
+            logdata['errorlastlong'] = df['B']
+            logdata['errorlastshort'] = df['B'] / stdlonglast * stdshortlast
+            logdata.loc[0, 'errorpvlong'] = 0
+            logdata.loc[0, 'errorlastlong'] = 0
+            logdata.loc[0, 'errorpvshort'] = 0
+            logdata.loc[0, 'errorlastshort'] = 0
 
+        if typeofnoice == "gaussian":
+            df = pd.DataFrame(np.random.normal(0, stdlongpv, len(logdata)))
+            logdata['errorpvlong'] = df[0]
+            logdata['errorpvshort'] = df[0] / stdlongpv * stdshortpv
+
+            df = pd.DataFrame(np.random.normal(0, stdlonglast, len(logdata)))
+            logdata['errorlastlong'] = df[0]
+            logdata['errorlastshort'] = df[0] / stdlonglast * stdshortlast

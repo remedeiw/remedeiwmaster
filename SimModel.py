@@ -58,10 +58,12 @@ class Model:
         self.logdata['energydemandnopv'] = self.dataloadprofiles['Summe']
         self.logdata = self.logdata.reset_index()
 
+
     def run(self, ignoreprldecision=False, ignoresrldecision=False, showprogress=False, runwithnoise=False):
 
         # Berrechung für PV-Leistung
         self.updatecapacityusedbypv()
+        modelcopy = copy.deepcopy(self)
         # self.updatechargecapacity()
         # Agenten
         for i in range(0, len(self.logdata)):
@@ -69,10 +71,21 @@ class Model:
                 if runwithnoise:
                     logdatacopy = copy.copy(self.logdata)
                     # Hier einfügen noise auf logdatacopy
-                    if self.logdata.iloc[i, 'typeofdecision'] == "SRL" or self.logdata.iloc[i, 'typeofdecision'] == "PRL1":
-                        pass
-                    if self.logdata.iloc[i, 'typeofdecision'] == "PRL2" or self.logdata.iloc[i, 'typeofdecision'] == "PRL3":
-                        pass
+                    if self.logdata.loc[i, 'typeofdecision'] == "SRL" or self.logdata.loc[i, 'typeofdecision'] == "PRL1":
+                        logdatacopy['pvpower'] = logdatacopy['pvpower'] * (logdatacopy['errorpvshort'] + 1)
+                        logdatacopy['energydemandnopv'] = logdatacopy['energydemandnopv'] * (logdatacopy['errorlastshort'] + 1)
+                        logdatacopy['netenergydemand'] = logdatacopy['energydemandnopv'] - logdatacopy['pvpower']
+                        modelcopy.logdata = logdatacopy
+                        modelcopy.logdata.to_csv('test.csv')
+                        modelcopy.updatecapacityusedbypv()
+                        logdatacopy = modelcopy.logdata
+                    if self.logdata.loc[i, 'typeofdecision'] == "PRL2" or self.logdata.loc[i, 'typeofdecision'] == "PRL3":
+                        logdatacopy['pvpower'] = logdatacopy['pvpower'] * (logdatacopy['errorpvlong'] + 1)
+                        logdatacopy['energydemandnopv'] = logdatacopy['energydemandnopv'] * (logdatacopy['errorlastlong'] + 1)
+                        logdatacopy['netenergydemand'] = logdatacopy['energydemandnopv'] - logdatacopy['pvpower']
+                        modelcopy.logdata = logdatacopy
+                        modelcopy.updatecapacityusedbypv()
+                        logdatacopy = modelcopy.logdata
                 else:
                     logdatacopy = copy.copy(self.logdata)
             # PRL Entscheidungen

@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import copy
 
 
 def plotdataframecontrolenergy(dataframe, posorneg):
@@ -118,4 +119,16 @@ def plotchargecapacity(model):
     #plt.xticks(locs,labels, rotation=15)
     #locs, labels = plt.xticks()
 
+
+def plot_error(data):
+    logdata = copy.copy(data)
+    plt.figure(figsize=(12, 5))
+    logdata['netenergydemand'].plot()
+    logdata['netenergydemandshorterror'] = logdata['energydemandnopv'] * (logdata['errorlastshort'] + 1) - logdata['pvpower'] * (
+                logdata['errorpvshort'] + 1)
+    logdata['netenergydemandshorterror'].plot()
+    logdata['netenergydemandlongerror'] = logdata['energydemandnopv'] * (logdata['errorlastlong'] + 1) - logdata['pvpower'] * (
+                logdata['errorpvlong'] + 1)
+    logdata['netenergydemandlongerror'].plot()
+    legend = plt.legend(loc='lower left', frameon=False)
 

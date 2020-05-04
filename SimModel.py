@@ -286,6 +286,7 @@ class Model:
             logdata.loc[0, 'errorpvshort'] = 0
             logdata.loc[0, 'errorlastshort'] = 0
 
+
         if typeofnoice == "gaussian":
             df = pd.DataFrame(np.random.normal(0, stdlongpv, len(logdata)))
             logdata['errorpvlong'] = df[0]
@@ -294,3 +295,15 @@ class Model:
             df = pd.DataFrame(np.random.normal(0, stdlonglast, len(logdata)))
             logdata['errorlastlong'] = df[0]
             logdata['errorlastshort'] = df[0] / stdlonglast * stdshortlast
+
+        if stdlonglast == 0:
+            logdata['errorlastlong'] = 0
+        if stdlongpv == 0:
+            logdata['errorpvlong'] = 0
+        if stdshortlast == 0:
+            logdata['errorlastshort'] = 0
+        if stdshortpv == 0:
+            logdata['errorpvshort'] = 0
+
+
+

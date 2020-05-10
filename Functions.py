@@ -96,10 +96,11 @@ def kumuliereprofile(dataframe, profilenumbers):
 def plotchargecapacity(model):
     # X Achse 2. Plot neu beschriften
     plt.figure(figsize=(16, 5))
-    model.logdata['chargecapacity'].plot(color='red')
+    model.logdata['chargecapacity'].plot(color='purple')
     model.logdata['chargecapacityusedbypv'].plot(color='blue')
     model.logdata['chargecapacityusedbycontrolenergyprl'].plot(color='orange')
     model.logdata['chargecapacityusedbycontrolenergysrl'].plot(color='green')
+    model.logdata['chargecapacityusedbytrading'].plot(color='red')
     legend = plt.legend(loc='upper left', frameon=False)
     plt.axhline(y=0, color='pink')
     plt.axhline(y=model.capacityofenergystorage, color='pink')
@@ -108,7 +109,7 @@ def plotchargecapacity(model):
     plt.figure(figsize=(16, 5))
     plt.stackplot(model.logdata.index, model.logdata['chargecapacityusedbypv'],
     model.logdata['chargecapacityusedbycontrolenergyprl'],
-    model.logdata['chargecapacityusedbycontrolenergysrl'], labels=['PV', 'PRL', 'SRL'],
+    model.logdata['chargecapacityusedbycontrolenergysrl'], model.logdata['chargecapacityusedbytrading'], labels=['PV', 'PRL', 'SRL', 'trading'],
             baseline="zero")
     # plt.stackplot(model.logdata.index ,model.logdata['chargecapacityusedbycontrolenergyprl'], model.logdata['chargecapacityusedbycontrolenergysrl'], model.logdata['chargecapacityusedbypv'], labels=['PRL','SRL','PV'], baseline="zero")
     plt.axhline(y=0, color='pink')

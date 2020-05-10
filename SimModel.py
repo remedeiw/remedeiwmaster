@@ -27,8 +27,9 @@ erhält Antwort von Agent und führt sie auf logdatei aus
 
 
 class Model:
-    def __init__(self, dataloadprofiles, listoflastprofiles, dataafrr, datafcr, pvdata, numberofhouseswithpv, capacityofpvs,
+    def __init__(self, dataloadprofiles, listoflastprofiles, dataafrr, datafcr, pricedata, pvdata, numberofhouseswithpv, capacityofpvs,
                  capacityofenergystorage, agent):
+        self.pricedata = pricedata
         self.agent = agent
         self.dataloadprofiles = Func.kumuliereprofile(dataloadprofiles, listoflastprofiles)
         # Lastprofile in Auflösung Minutentakt und W/s <<< umrechnung auf KWH
@@ -51,6 +52,7 @@ class Model:
         self.logdata['chargecapacityusedbypv'] = 0
         self.logdata['chargecapacityusedbycontrolenergysrl'] = 0
         self.logdata['chargecapacityusedbycontrolenergyprl'] = 0
+        self.logdata['chargecapacityusedbytrading'] = 0
         self.setdecisionpoint()
         self.logdata = self.logdata.set_index('timestamp')
         self.logdata['netenergydemand'] = self.dataloadprofiles['Summe'] - self.pvdata['pvpower']
@@ -59,7 +61,7 @@ class Model:
         self.logdata = self.logdata.reset_index()
 
 
-    def run(self, ignoreprldecision=False, ignoresrldecision=False, showprogress=False, runwithnoise=False):
+    def run(self, ignoreprldecision=False, ignoresrldecision=False, showprogress=False, runwithtrading=False, runwithnoise=False):
 
         # Berrechung für PV-Leistung
         self.updatecapacityusedbypv()
@@ -107,6 +109,10 @@ class Model:
 
         self.updatecapacityusedbypv()
         self.updatechargecapacity()
+
+        # optionales trading
+        if runwithtrading:
+            self.addtrading()
 
     def updatecapacityusedbypv(self):
         # Fall unterscheidung pv größer Bedarf vs kleiner >> Anpassung Speicher und +- Grid
@@ -214,11 +220,15 @@ class Model:
                 for i in range(index + 324, index + 420):
                     self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = reply[1]
 
-    def cutlogdatei(self, start=192, end=289):
+    def cutlogdatei(self, start=192, end=289, includepricedatafortrading=False):
         self.logdata = self.logdata.loc[start:len(self.logdata) - end]
+        if includepricedatafortrading:
+            self.pricedata = self.pricedata.loc[start:len(self.pricedata) - end]
 
     def evaluaterevenuestream(self):
         self.logdata = self.logdata.reset_index(drop=True)
+        self.pricedata = self.pricedata.reset_index(drop=True)
+
         self.logdata['drawfromgridcumsum'] = self.logdata['drawfromgrid'].cumsum()
         self.logdata['feedingridcumsum'] = self.logdata['feedingrid'].cumsum()
         totalenergydemand = self.logdata['energydemandnopv'].sum()
@@ -248,9 +258,16 @@ class Model:
             valueprlcontrolenergy = valueprlcontrolenergy + self.datafcr.loc[timestamp]['DE_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'] / 250 / 2 * \
                                     self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl']
 
-        valuesumme = valueprlcontrolenergy + valuesrlcontrolenergy + valuefeedingrid + valuechargecapacity + valueselfconsumption
+        valuetrading = 0
+        if self.logdata['chargecapacityusedbytrading'].sum() > 0:
+            for i in range(len(self.logdata)):
+                valuetrading = valuetrading + self.logdata.loc[i, 'chargecapacityusedbytrading'] * self.pricedata.loc[i, 'pricediff'] / 1000 # umrechnung in kwh
 
-        return [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy, valueprlcontrolenergy, valuesumme]
+        valuesumme = valueprlcontrolenergy + valuesrlcontrolenergy + valuefeedingrid + valuechargecapacity + valueselfconsumption + valuetrading
+
+
+
+        return [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy, valueprlcontrolenergy, valuetrading, valuesumme]
 
     def def_noise(self, typeofnoice, stdlongpv, stdshortpv, stdlonglast, stdshortlast, logdata):
         if typeofnoice == "perlin":
@@ -306,4 +323,18 @@ class Model:
             logdata['errorpvshort'] = 0
 
 
+    def addtrading(self):
+        pricedata = self.pricedata.reset_index()
+        pricedata['pricediff'] = pricedata['price'] - pricedata['price'].shift(1)
+        pricedata['direction'] = [1 if pricedata['pricediff'].loc[i] > 0 else 0 for i in pricedata.index]
+        pricedata['signalbasedbuy'] = [1 if pricedata.loc[i, 'ma0.5'] < pricedata.loc[i, 'ma2'] else 0 for i in pricedata.index]
+
+        pricedata['profitperfect'] = [pricedata.loc[i, 'pricediff'] if pricedata.loc[i, 'direction'] == 1 else 0 for i in pricedata.index]
+        pricedata['profitsignal'] = [pricedata.loc[i, 'pricediff'] if pricedata.loc[i, 'signalbasedbuy'] == 1 else 0 for i in
+                                     pricedata.index]
+        pricedata['profitsimpel'] = pricedata['pricediff']
+        self.pricedata = pricedata
+        self.logdata['tradingperfect'] = [True if pricedata['direction'].loc[i] == 1 else False for i in pricedata.index]
+        self.logdata['chargecapacityusedbytrading'] = [self.capacityofenergystorage - self.logdata.loc[i, 'chargecapacity'] if self.logdata.loc[i, 'tradingperfect'] else 0 for i in self.logdata.index]
+        self.logdata['chargecapacity'] = [self.capacityofenergystorage if self.logdata.loc[i, 'tradingperfect'] else self.logdata.loc[i, 'chargecapacity'] for i in self.logdata.index]
 

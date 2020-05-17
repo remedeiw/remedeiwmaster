@@ -101,11 +101,16 @@ def plotchargecapacity(model):
     model.logdata['chargecapacityusedbycontrolenergyprl'].plot(color='orange')
     model.logdata['chargecapacityusedbycontrolenergysrl'].plot(color='green')
     model.logdata['chargecapacityusedbytrading'].plot(color='red')
-    legend = plt.legend(loc='upper left', frameon=False)
+    #legend = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    legend = plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2),
+               ncol=3)
     plt.axhline(y=0, color='pink')
     plt.axhline(y=model.capacityofenergystorage, color='pink')
     plt.xticks(rotation=15)
-    plt.ylabel('Charge Capacity')
+    plt.ylabel('Charge Capacity in kwh')
+    locs, labels = plt.xticks()
+    labels = labels[1:]
+
     plt.figure(figsize=(16, 5))
     plt.stackplot(model.logdata.index, model.logdata['chargecapacityusedbypv'],
     model.logdata['chargecapacityusedbycontrolenergyprl'],
@@ -114,11 +119,13 @@ def plotchargecapacity(model):
     # plt.stackplot(model.logdata.index ,model.logdata['chargecapacityusedbycontrolenergyprl'], model.logdata['chargecapacityusedbycontrolenergysrl'], model.logdata['chargecapacityusedbypv'], labels=['PRL','SRL','PV'], baseline="zero")
     plt.axhline(y=0, color='pink')
     plt.axhline(y=model.capacityofenergystorage, color='pink')
-    plt.xticks(np.arange(1, len(model.logdata.index), step=100), [], rotation=15)
-    legend = plt.legend(loc='upper left', frameon=False)
-    plt.ylabel('Charge Capacity')
+    plt.xticks(np.arange(1, len(model.logdata.index), step=200),labels , rotation=15)
+    legend = plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2),
+          ncol=3)
+    plt.ylabel('Charge Capacity in kwh')
+    plt.xlabel('timestamp')
     #plt.xticks(locs,labels, rotation=15)
-    #locs, labels = plt.xticks()
+
 
 
 def plot_error(data):
@@ -131,5 +138,10 @@ def plot_error(data):
     logdata['netenergydemandlongerror'] = logdata['energydemandnopv'] * (logdata['errorlastlong'] + 1) - logdata['pvpower'] * (
                 logdata['errorpvlong'] + 1)
     logdata['netenergydemandlongerror'].plot()
-    legend = plt.legend(loc='lower left', frameon=False)
+    legend = plt.legend(loc='upper right', frameon=False)
+    plt.xticks(rotation=15)
+    plt.ylabel('net energy demand in kwh')
+    plt.xlabel('time')
+
+
 

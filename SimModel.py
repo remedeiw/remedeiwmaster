@@ -41,6 +41,7 @@ class Model:
         self.datafcr = datafcr
         self.pvdata = pvdata
         self.capacityofenergystorage = capacityofenergystorage
+        self.valuedata = 0
         indexlogdata = dataloadprofiles.index
         collumslogdata = ['chargecapacity', 'netenergydemand', 'drawfromgrid', 'feedingrid', 'chargecapacityusedbypv',
                           'chargecapacityusedbycontrolenergysrl', 'chargecapacityusedbycontrolenergyprl',
@@ -264,7 +265,7 @@ class Model:
                 valuetrading = valuetrading + self.logdata.loc[i, 'chargecapacityusedbytrading'] * self.pricedata.loc[i, 'pricediff'] / 1000 # umrechnung in kwh
 
         valuesumme = valueprlcontrolenergy + valuesrlcontrolenergy + valuefeedingrid + valuechargecapacity + valueselfconsumption + valuetrading
-
+        self.valuedata = [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy, valueprlcontrolenergy, valuetrading, valuesumme]
 
 
         return [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy, valueprlcontrolenergy, valuetrading, valuesumme]

@@ -23,6 +23,19 @@ schreibt in logdatei decisionpoint und typeofdecision
 
 decisionhandler
 erhält Antwort von Agent und führt sie auf logdatei aus
+
+cutlogdatei
+kürzt die Logdatei und optional auch die Strompreise
+
+evaluaterevenuestream
+bewertet die logdatei nach selfconsumotion, end ladestand der Baterie, feed in grid, Srl, PRL, Trading
+
+def noise
+für noise ein - gaussian oder perlin - Parameter für kurze und lange vorraussage
+
+add trading
+füge nach Simulation Trading in die Lücken, im code änderbare Trading strategie - perfekte vorraussicht
+
 '''
 
 
@@ -31,6 +44,7 @@ class Model:
                  capacityofenergystorage, agent):
         self.pricedata = pricedata
         self.agent = agent
+        self.listoflastprofiles = listoflastprofiles
         self.dataloadprofiles = Func.kumuliereprofile(dataloadprofiles, listoflastprofiles)
         # Lastprofile in Auflösung Minutentakt und W/s <<< umrechnung auf KWH
         self.dataloadprofiles['Summe'] = self.dataloadprofiles['Summe'] * 60 / 3600000
@@ -271,6 +285,7 @@ class Model:
         return [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy, valueprlcontrolenergy, valuetrading, valuesumme]
 
     def def_noise(self, typeofnoice, stdlongpv, stdshortpv, stdlonglast, stdshortlast, logdata):
+
         if typeofnoice == "perlin":
             base = random.randrange(1, 10000, 100)
             octaves = 5

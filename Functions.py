@@ -4,7 +4,8 @@ import numpy as np
 import copy
 
 
-def plotdataframecontrolenergy(dataframe, posorneg):
+def plot_secondcontrolenergy(model, posorneg="NEG"):
+    dataframe = model.dataafrr
     dataframegroup = dataframe.groupby('PRODUCT')
     plt.figure(figsize=(12, 5))
     for product, group in dataframegroup:
@@ -18,34 +19,31 @@ def plotdataframecontrolenergy(dataframe, posorneg):
     legend.get_texts()[4].set_text(posorneg + '_16_20')
     legend.get_texts()[5].set_text(posorneg + '_20_24')
     plt.xticks(rotation=45)
+    plt.ylabel("price in Euro/MWh")
 
 
-def plotpvdata(pvdata):
+def plot_pvdata(model):
     plt.figure(figsize=(12, 5))
-    pvdata['electricity'].plot(color="orange")
+    model.pvdata['electricity'].plot(color="orange")
     plt.xticks(rotation=45)
 
 
-def plotlastprofiledata(lastprofile, profilenumbers):
+def plot_lastprofiledata(model):
     plt.figure(figsize=(12, 5))
-    for profilenum in profilenumbers:
+    for profilenum in model.listoflastprofiles:
         profil = 'Profil ' + str(profilenum)
-        lastprofile[profil].plot()
+        model.dataloadprofiles[profil].plot()
     plt.xticks(rotation=45)
     legend = plt.legend(loc='upper left', frameon=False)
+    plt.ylabel('last')
 
 
 
-def plotpricedata(pricedata):
+def plot_primecontroldata(model):
     plt.figure(figsize=(12, 5))
-    pricedata['Deutschland/Luxemburg[Euro/MWh]'].plot(color="pink")
+    model.datafcr['CROSSBORDER_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'].plot()
     plt.xticks(rotation=45)
-
-
-def plotprimecontroldata(data):
-    plt.figure(figsize=(12, 5))
-    data['CROSSBORDER_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'].plot()
-    plt.xticks(rotation=45)
+    plt.ylabel("price in Euro/MWh")
 
 
 #def kumulierelastprofildaten(dataframe, timestampsdf):
@@ -93,7 +91,7 @@ def kumuliereprofile(dataframe, profilenumbers):
     return dataframe
 
 
-def plotchargecapacity(model):
+def plot_chargecapacity(model):
     # X Achse 2. Plot neu beschriften
     plt.figure(figsize=(16, 5))
     model.logdata['chargecapacity'].plot(color='purple')
@@ -128,8 +126,8 @@ def plotchargecapacity(model):
 
 
 
-def plot_error(data):
-    logdata = copy.copy(data)
+def plot_error(model):
+    logdata = copy.copy(model.logdata)
     plt.figure(figsize=(12, 5))
     logdata['netenergydemand'].plot()
     logdata['netenergydemandshorterror'] = logdata['energydemandnopv'] * (logdata['errorlastshort'] + 1) - logdata['pvpower'] * (
@@ -145,3 +143,25 @@ def plot_error(data):
 
 
 
+def plot_revenuestreams(model):
+    fig = plt.figure()
+    ax = fig.add_axes([0, 0, 1, 1])
+    langs = ['value selfconsumption', 'value chargecapacity', 'value feed in grid', 'value SRL controlenergy', 'value PRL controlenergy',
+             'value trading', 'value summe']
+    data = model.valuedata
+    ax.bar(langs, data, color=['cornflowerblue', 'purple', 'yellow', 'green', 'orange', 'red', 'darksalmon'])
+    plt.xticks(rotation=20)
+    plt.axhline(y=data[6], color='darksalmon')
+    plt.show()
+
+
+
+def plot_pricedata(model):
+    plt.figure(figsize=(12, 5))
+    model.pricedata['price'].plot(label='price')
+    model.pricedata['ma2'].plot(label='ma2')
+    model.pricedata['ma0.5'].plot(label='ma0.5')
+    plt.xticks(rotation=20)
+    plt.ylabel("price in Euro/MWh")
+    plt.legend()
+    plt.show()

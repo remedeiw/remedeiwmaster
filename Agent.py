@@ -127,7 +127,7 @@ class Agentoptimizevalocc(Superagent):
         return start
 
 
-class Agenttest(Superagent):
+class Agent(Superagent):
     def __init__(self):
         self.srlsteps = [64, 80, 96, 112, 128, 144, 160]
         self.prlsteps = [132, 228, 324, 420]
@@ -167,12 +167,6 @@ class Agenttest(Superagent):
 
 
         decision = agent.get_decision(index, typeofdecision, logdata, copymodel)
-
-
-
-
-
-
 
         return decision
 

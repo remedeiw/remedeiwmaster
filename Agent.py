@@ -1,13 +1,14 @@
 import math
 import SimModel
 
-
+# Jeder Agent erbt von Superagent und hat die selben Parameter für die get_decision
 class Superagent():
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
         pass
 
 
-class Agentnopv(Superagent):
+class Agentonlypv(Superagent):
+    # Agent onlypv gibt immer 0 zurück
     def get_decision(self, index, typeofdecision, logdata, copymodel):
         if typeofdecision == "SRL":
             decision = [0, 0, 0, 0, 0, 0]
@@ -20,7 +21,8 @@ class Agentnopv(Superagent):
         return decision
 
 
-class Agentmanualinput(Superagent):
+class Agent_manualinput(Superagent):
+    # Agent manualinput ermöglich einen manuellen input für jede Entscheidung während der Laufzeit
     def get_decision(self, index, typeofdecision, logdata, copymodel):
         if typeofdecision == "SRL":
             eingabe1 = int(input(str(index) + " 00_04 " + str(typeofdecision)))
@@ -45,13 +47,20 @@ class Agentmanualinput(Superagent):
         return decision
 
 
-class Agentoccupancyrate(Superagent):
-    def __init__(self, capacityofenergystorage):
-        self.capacityofenergystorage = capacityofenergystorage
+class Agent_Fillforoccupancyrate(Superagent):
+    # Füllt freie Kapzitäten auf
+    #
+    def __init__(self):
+        self.capacityofenergystorage = 0
+        # Steps von Entscheidungspunkt zu SRL Zeitscheiben
         self.srlsteps = [64, 80, 96, 112, 128, 144, 160]
+        # Steps von Entscheidungspunkt zu PRL Zeitscheiben
         self.prlsteps = [132, 228, 324, 420]
 
+
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
+        # Zieht maximalen Ladestand im Entscheigungszeitraum von der Speicher Kapazität ab und gibt den minimale freie Kapazität zurück
+        self.capacityofenergystorage = copymodel.capacityofenergystorage
         if typeofdecision == "SRL" and index + self.srlsteps[6] < len(logdata):
             decision = [0, 0, 0, 0, 0, 0]
             for i in range(0, 6):
@@ -88,14 +97,21 @@ class Agentoccupancyrate(Superagent):
         return decision
 
 
-class Agentoptimizevalocc(Superagent):
-    def __init__(self, capacityofenergystorage, storagetime):
-        self.occagent = Agentoccupancyrate(capacityofenergystorage)
+class Agent_Outlook(Superagent):
+    def __init__(self, storagetime):
+        self.occagent = Agent_Fillforoccupancyrate()
+        # Steps von Entscheidungspunkt zu SRL Zeitscheiben
         self.srlsteps = [64, 80, 96, 112, 128, 144, 160]
+        # Steps von Entscheidungspunkt zu PRL Zeitscheiben
         self.prlsteps = [132, 228, 324, 420]
+        # Tage die neben dem Entscheidungszeitraum mit betrachtet werden sollen
         self.storagetime = storagetime - 1
 
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
+        # Agent begrenzt die Ladecapazität für PV durch hörere Zuteilung zu PRL
+        # Es soll nur so viel PV geladen werden das es gerade aufgebraucht wird bis zum nächsten Sonnenaufgang
+        # Über den Parameter "Storagetime" kann festgelegt werden wie viele Tage vorraus geschaut werden sollen.
+        # Bei Storagetime = 2 wird nicht nur der Tag der eigentlichen Entscheidung sonder auch der daneben betrachtet
         decision = self.occagent.get_decision(index, typeofdecision, logdata, copymodel)
         if typeofdecision == "PRL1":
             if index + self.prlsteps[1] + 192 < len(logdata):
@@ -133,7 +149,11 @@ class Agent(Superagent):
         self.prlsteps = [132, 228, 324, 420]
 
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
-        agent = Agentoptimizevalocc(copymodel.capacityofenergystorage, 1)
+        #
+        # Agent überprüft den Tag nach dem Entscheidungszeitraum.
+        # Ist es kein sonniger Tag, so wird die Storagetime für den voheriegen erhöht.
+        #
+        agent = Agent_Outlook(1)
 
         if typeofdecision == "PRL1":
             if index + self.prlsteps[1] + 192 < len(logdata):
@@ -186,12 +206,15 @@ class Agent(Superagent):
 
 
 
-class Agentoptimizevalue(Superagent):
+class Agentoptimizebypricesignal(Superagent):
     def __init__(self, step=1):
         self.step = step
 
+    # Experimental
+    # Preis sensitiver Agent erhöht die PRL Entscheidung so lange wie es den Value des Entscheidungsraums erhöht.
+    # Startet mit Agent Fillforoccunpancyrate Decision
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
-        modelagent = Agentoccupancyrate(copymodel.capacityofenergystorage)
+        modelagent = Agent_Fillforoccupancyrate(copymodel.capacityofenergystorage)
         self.copymodel = copymodel
         self.copymodel.agent = modelagent
         if typeofdecision[:3] == "PRL":

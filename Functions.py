@@ -24,8 +24,9 @@ def plot_secondcontrolenergy(model, posorneg="NEG"):
 
 def plot_pvdata(model):
     plt.figure(figsize=(12, 5))
-    model.pvdata['electricity'].plot(color="orange")
+    model.pvdata['electricity'].plot(color="#2CBDFE")
     plt.xticks(rotation=45)
+    plt.ylabel('kwh')
 
 
 def plot_lastprofiledata(model):
@@ -41,7 +42,7 @@ def plot_lastprofiledata(model):
 
 def plot_primecontroldata(model):
     plt.figure(figsize=(12, 5))
-    model.datafcr['CROSSBORDER_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'].plot()
+    model.datafcr['CROSSBORDER_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'].plot(color='#2CBDFE')
     plt.xticks(rotation=45)
     plt.ylabel("price in Euro/MWh")
 
@@ -56,9 +57,9 @@ def plot_primecontroldata(model):
 #    return dataframe'
 
 
-def viertelstundentakt(dataframe):
-    dataframe = dataframe[dataframe.index % 15 == 0]
-    return dataframe
+#def viertelstundentakt(dataframe):
+#    dataframe = dataframe[dataframe.index % 15 == 0]
+#    return dataframe
 
 
 def getdata(timestart, timeende):
@@ -149,7 +150,7 @@ def plot_revenuestreams(model):
     langs = ['value selfconsumption', 'value chargecapacity', 'value feed in grid', 'value SRL controlenergy', 'value PRL controlenergy',
              'value trading', 'value summe']
     data = model.valuedata
-    ax.bar(langs, data, color=['cornflowerblue', 'purple', 'yellow', 'green', 'orange', 'red', 'darksalmon'])
+    ax.bar(langs, data, color=['#2CBDFE', '#9D2EC5', 'yellow', '#47DBCD', '#F5b14C', 'red', 'darksalmon'])
     plt.xticks(rotation=20)
     plt.axhline(y=data[6], color='darksalmon')
     plt.show()
@@ -158,7 +159,7 @@ def plot_revenuestreams(model):
 
 def plot_pricedata(model):
     plt.figure(figsize=(12, 5))
-    model.pricedata['price'].plot(label='price')
+    model.pricedata['price'].plot(label='price', color='#2CBDFE')
     model.pricedata['ma2'].plot(label='ma2')
     model.pricedata['ma0.5'].plot(label='ma0.5')
     plt.xticks(rotation=20)

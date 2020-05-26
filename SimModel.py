@@ -9,14 +9,17 @@ import random
 Die Klasse Model dient zur Simulation. 
 
 __init__
-Der Kinstruktor übergibt alle relevabteb Datensätze und erstellt eine Logdatei. In der Logdateil sollen während der
-Simulation alle Werte berechnet werden und direkt die Logdatei als DF manipuliert werden.
+Der Kinstruktor übergibt alle relevante Datensätze und erstellt eine Logdatei. In der Logdateil sollen während der
+Simulation alle Werte berechnet werden und direkt die Logdatei geschrieben werden.
 
 run
 Die run Methode soll verwendet werden um die Simulation durchzuführen.
 
 updatecapacityusedbypv
 update das dataframe mit dem input pvleistung und lastprofil im bezug auf verwendeten speicher
+
+updatechargecapacity
+berechnet die Chargecapacity
 
 setdecisionpoint
 schreibt in logdatei decisionpoint und typeofdecision
@@ -28,13 +31,37 @@ cutlogdatei
 kürzt die Logdatei und optional auch die Strompreise
 
 evaluaterevenuestream
-bewertet die logdatei nach selfconsumotion, end ladestand der Baterie, feed in grid, Srl, PRL, Trading
+bewertet die logdatei nach selfconsumotion, endladestand der Baterie, feed in grid, Srl, PRL, Trading
 
 def noise
-für noise ein - gaussian oder perlin - Parameter für kurze und lange vorraussage
+added noise - gaussian oder perlin - Parameter für kurze und lange vorraussage
 
 add trading
 füge nach Simulation Trading in die Lücken, im code änderbare Trading strategie - perfekte vorraussicht
+
+Spalten der Logdatei:
+
+timestamp - Datum + Uhrzeit
+chargecapacity - Auslastung Speicher
+netenergydemand 
+drawfromgrid
+feedingrid
+chargecapacityusedbypv
+chargecapacityusedbycontrolenergysrl
+chargecapacityusedbycontrolenergyprl
+decisionpoint - Wird an diesem Zeitpunkt eine Entscheidung getriggert
+typeofdecision - Was für eine Art von Entscheidung
+chargecapacityusedbytrading
+pvpower - Leistung PV Anlage
+energydemandnopv - Verbrauch der Haushalte
+errorpvlong - Error Faktor mit EW 0
+errorpvshort - Error Faktor mit EW 
+errorlastlong - Error Faktor mit EW 
+errorlastshort - Error Faktor mit EW 
+tradingperfect - Error Faktor mit EW 
+drawfromgridcumsum - kumulierte summe
+feedingridcumsum - kumulierte summe
+
 
 '''
 
@@ -56,6 +83,8 @@ class Model:
         self.pvdata = pvdata
         self.capacityofenergystorage = capacityofenergystorage
         self.valuedata = 0
+
+        #Erstellen der LogData
         indexlogdata = dataloadprofiles.index
         collumslogdata = ['chargecapacity', 'netenergydemand', 'drawfromgrid', 'feedingrid', 'chargecapacityusedbypv',
                           'chargecapacityusedbycontrolenergysrl', 'chargecapacityusedbycontrolenergyprl',
@@ -68,7 +97,10 @@ class Model:
         self.logdata['chargecapacityusedbycontrolenergysrl'] = 0
         self.logdata['chargecapacityusedbycontrolenergyprl'] = 0
         self.logdata['chargecapacityusedbytrading'] = 0
+
+        # setzen der Entscheidungen in der LogData
         self.setdecisionpoint()
+
         self.logdata = self.logdata.set_index('timestamp')
         self.logdata['netenergydemand'] = self.dataloadprofiles['Summe'] - self.pvdata['pvpower']
         self.logdata['pvpower'] = self.pvdata['pvpower']
@@ -78,63 +110,77 @@ class Model:
 
     def run(self, ignoreprldecision=False, ignoresrldecision=False, showprogress=False, runwithtrading=False, runwithnoise=False):
 
-        # Berrechung für PV-Leistung
+        # Berrechung für PV-Leistung und erstellen einer Copy zur übergabe
         self.updatecapacityusedbypv()
         modelcopy = copy.deepcopy(self)
         # self.updatechargecapacity()
-        # Agenten
+        # Simulation über die Zeit - Online durch For-Schleife
         for i in range(0, len(self.logdata)):
             if self.logdata.loc[i, 'decisionpoint']:
+
+                # Falls die Simulation mit Noise durchgeführt wird, wird dieser vor der Entscheidung in die Logdata eingefügt und übergeben
                 if runwithnoise:
                     logdatacopy = copy.copy(self.logdata)
-                    # Hier einfügen noise auf logdatacopy
                     if self.logdata.loc[i, 'typeofdecision'] == "SRL" or self.logdata.loc[i, 'typeofdecision'] == "PRL1":
                         logdatacopy['pvpower'] = logdatacopy['pvpower'] * (logdatacopy['errorpvshort'] + 1)
                         logdatacopy['energydemandnopv'] = logdatacopy['energydemandnopv'] * (logdatacopy['errorlastshort'] + 1)
                         logdatacopy['netenergydemand'] = logdatacopy['energydemandnopv'] - logdatacopy['pvpower']
+
+                        # neuberechnung der Capacity im CopyModel zur übergabe
                         modelcopy.logdata = logdatacopy
-                        modelcopy.logdata.to_csv('test.csv')
                         modelcopy.updatecapacityusedbypv()
                         logdatacopy = modelcopy.logdata
                     if self.logdata.loc[i, 'typeofdecision'] == "PRL2" or self.logdata.loc[i, 'typeofdecision'] == "PRL3":
                         logdatacopy['pvpower'] = logdatacopy['pvpower'] * (logdatacopy['errorpvlong'] + 1)
                         logdatacopy['energydemandnopv'] = logdatacopy['energydemandnopv'] * (logdatacopy['errorlastlong'] + 1)
                         logdatacopy['netenergydemand'] = logdatacopy['energydemandnopv'] - logdatacopy['pvpower']
+
+                        # neuberechnung der Capacity im CopyModel zur übergabe
                         modelcopy.logdata = logdatacopy
                         modelcopy.updatecapacityusedbypv()
                         logdatacopy = modelcopy.logdata
                 else:
                     logdatacopy = copy.copy(self.logdata)
             # PRL Entscheidungen
+            # Fragt den Agenden nach seiner Antwort und ruft den Decissionhandler auf
             if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'PRL' and not ignoreprldecision:
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
                                      self.agent.get_decision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
                                                              logdata=logdatacopy, copymodel=copy.deepcopy(self)))
                 self.updatecapacityusedbypv()
             # SRL Entscheidungen
+            # Fragt den Agenden nach seiner Antwort und ruft den Decissionhandler auf
             if self.logdata.loc[i, 'decisionpoint'] and self.logdata.loc[i, 'typeofdecision'][:3] == 'SRL' and not ignoresrldecision:
-                # self.agent.getdecision(i, str(self.logdata[i, 'typeofdecision']))
                 self.decisionhandler(i, self.logdata.loc[i, 'typeofdecision'],
                                      self.agent.get_decision(index=i, typeofdecision=self.logdata.loc[i, 'typeofdecision'],
                                                              logdata=logdatacopy, copymodel=copy.deepcopy(self)))
+
+            # Print Progress
             if i % (len(self.logdata) // 10) == 0 and showprogress:
                 print("Progress: " + str(int(i / len(self.logdata) * 100)) + "%")
 
-        # Update am Ende der Simulation
-
+        # Update
         self.updatecapacityusedbypv()
         self.updatechargecapacity()
 
         # optionales trading
         if runwithtrading:
             self.addtrading()
+        self.updatechargecapacity()
+
 
     def updatecapacityusedbypv(self):
-        # Fall unterscheidung pv größer Bedarf vs kleiner >> Anpassung Speicher und +- Grid
         self.logdata['chargecapacityusedbypv'] = 0
         self.logdata['drawfromgrid'] = 0
         self.logdata['feedingrid'] = 0
+
+        # Fall unterscheidung pv größer Bedarf vs kleiner >> Anpassung Speicher und +- Grid
         for i in range(0, len(self.logdata)):
+
+            # Positiver Netenergydemand
+            # Energie wird vom Speicher bezogen
+            # Falls Speicher nicht mehr voll wird der Strom vom Netz bezogen
+            # Ist der Speicher voller als die Kapazitätsgrenze, entlade Speicher ins Netz (feed in grid)
             if self.logdata.iloc[i]['netenergydemand'] > 0:
                 self.logdata.loc[i, 'drawfromgrid'] = max(
                     self.logdata.iloc[i]['netenergydemand'] - self.logdata.iloc[i - 1]['chargecapacityusedbypv'], 0)
@@ -151,7 +197,9 @@ class Model:
                                                                         i, 'chargecapacityusedbypv'] - excess
                     self.logdata.loc[i, 'feedingrid'] = excess - self.logdata.loc[i, 'drawfromgrid']
                     self.logdata.loc[i, 'drawfromgrid'] = 0
-
+            # Negativer Netenergydemand
+            # Speicher so viel wie möglich in Speicher
+            # Ist der Speicher voll, übergib überflüssige Energie in Netz
             else:
                 self.logdata.loc[i, 'feedingrid'] = max(abs(self.logdata.iloc[i]['netenergydemand']) - (
                         self.capacityofenergystorage - self.logdata.loc[i - 1, 'chargecapacityusedbypv'] -
@@ -163,12 +211,16 @@ class Model:
                     self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'])
                 self.logdata.loc[i, 'drawfromgrid'] = 0
 
+
     def updatechargecapacity(self):
-        # der Wert Chargecapacity findet im Model keine Verwendung, lediglich zu späteren Auswertung.
+        # addiere einzelne Task zur Chargecapacity auf
         self.logdata['chargecapacity'] = self.logdata['chargecapacityusedbypv'] + self.logdata[
-            'chargecapacityusedbycontrolenergyprl'] + self.logdata['chargecapacityusedbycontrolenergysrl']
+            'chargecapacityusedbycontrolenergyprl'] + self.logdata['chargecapacityusedbycontrolenergysrl'] + self.logdata['chargecapacityusedbytrading']
 
     def setdecisionpoint(self):
+        # Setzen der Entscheidungspunkte in Logdata
+        # einzelne Steplängen 96 für Tag 672 für Woche
+        # 32, 60, 156 .... Zeitpunkt der ersten Entscheidung
         nextsrl, nextprlmon, nextprltue, nextprlwed, nextprlthu, nextprlfri = 32, 60, 156, 252, 348, 444
         for i in range(0, len(self.logdata)):
             if i == nextsrl:
@@ -197,6 +249,12 @@ class Model:
                 nextprlfri = nextprlfri + 672
 
     def decisionhandler(self, index, decisiontype, reply):
+        # Bekommt die Antwort des Agenten und trägt sie in die Logdatei ein.
+        # bei jeder Antwort wird geprüft ob das Ende des relavnten Zeitraums noch in der Logdatei enthalten ist.
+        # Anschließend wird der Wert in die Logdatei geschrieben.
+        # Die Grenzen entsprechen immer den Start sowie den Endzeitpunkt des relevanten Bereichs
+        # Bsp: PRL1 Entscheidungen sind für einen Zeitraum der 132 Simulationsschritte in der Zukunft liegt und nach 24h vorbei ist
+        # 24h* 4 (viertel stunden) = 96             132 + 96 = 228
         if decisiontype == 'SRL':
             if index + 80 < len(self.logdata):
                 for i in range(index + 64, index + 80):
@@ -243,17 +301,24 @@ class Model:
     def evaluaterevenuestream(self):
         self.logdata = self.logdata.reset_index(drop=True)
         self.pricedata = self.pricedata.reset_index(drop=True)
-
+    # Simple berechnung für SelfConsumption, feedingrid, chargecapacity
+    # kumulierte Summen werden gewichtet
         self.logdata['drawfromgridcumsum'] = self.logdata['drawfromgrid'].cumsum()
         self.logdata['feedingridcumsum'] = self.logdata['feedingrid'].cumsum()
         totalenergydemand = self.logdata['energydemandnopv'].sum()
+        # Gewichtung 0.30 Euro / kwh
         valueselfconsumption = (totalenergydemand - self.logdata['drawfromgrid'].sum()) * 0.30
+        # Gewichtung 0.10 Euro / kwh
         valuefeedingrid = self.logdata['feedingrid'].sum() * 0.10
+        # Gewichtung 0.30 Euro / kwh
         valuechargecapacity = self.logdata.loc[len(self.logdata) - 1]['chargecapacityusedbypv'] * 0.30
 
         valuesrlcontrolenergy = 0
         productsneg = ['NEG_00_04', 'NEG_04_08', 'NEG_08_12', 'NEG_12_16', 'NEG_16_20', 'NEG_20_24']
 
+        # Schleife mit Step 4*4 = 16 ( 4 Stunden - eine SRL Zeitscheibe) läuft über Simulation und multipliziert bereitgestellte SRL
+        # mit deren Preis
+        # Manipulierung des timestamps falls Preisdaten nicht aus selben Jahr wie timestamp der Simulatuion
         for counter, i in enumerate(range(0, len(self.logdata), 16)):
             timestamp = self.logdata.loc[i, 'timestamp']
             # ANSPASSUNG: Hier wird die Jahreszahl des Zeittempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
@@ -265,6 +330,9 @@ class Model:
 
         valueprlcontrolenergy = 0
 
+        # Schleife mit Step 4 * 24  ( 24 Stunden - eine PRL Zeitscheibe) läuft über Simulation und multipliziert bereitgestellte PRL
+        # mit deren Preis
+        # Manipulierung des timestamps falls Preisdaten nicht aus selben Jahr wie timestamp der Simulatuion
         for counter, i in enumerate(range(0, len(self.logdata), 4 * 24)):
             timestamp = self.logdata.loc[i, 'timestamp']
             # ANSPASSUNG: Hier wird die Jahreszahl des Zeittempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
@@ -274,6 +342,7 @@ class Model:
                                     self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl']
 
         valuetrading = 0
+        # Kumulierte Summe, falls Energie gehalten wird - multipliziert mit Return auf viertelstunden basis
         if self.logdata['chargecapacityusedbytrading'].sum() > 0:
             for i in range(len(self.logdata)):
                 valuetrading = valuetrading + self.logdata.loc[i, 'chargecapacityusedbytrading'] * self.pricedata.loc[i, 'pricediff'] / 1000 # umrechnung in kwh
@@ -286,6 +355,9 @@ class Model:
 
     def def_noise(self, typeofnoice, stdlongpv, stdshortpv, stdlonglast, stdshortlast, logdata):
 
+        # Langer Fehler muss größer sein als kurzer
+        #
+        # Setze Perlin Noise mit übergebenen Fehler
         if typeofnoice == "perlin":
             base = random.randrange(1, 10000, 100)
             octaves = 5
@@ -319,7 +391,7 @@ class Model:
             logdata.loc[0, 'errorpvshort'] = 0
             logdata.loc[0, 'errorlastshort'] = 0
 
-
+        # setze Gaussian Noise
         if typeofnoice == "gaussian":
             df = pd.DataFrame(np.random.normal(0, stdlongpv, len(logdata)))
             logdata['errorpvlong'] = df[0]
@@ -350,7 +422,9 @@ class Model:
                                      pricedata.index]
         pricedata['profitsimpel'] = pricedata['pricediff']
         self.pricedata = pricedata
+        # Setzte Tradingperfect auf True falls ein perfekter Händler Strom halten würde
         self.logdata['tradingperfect'] = [True if pricedata['direction'].loc[i] == 1 else False for i in pricedata.index]
+        # Freie Kapazitäten werden verwendet falls ein perfekter Händler Strom halten würde
         self.logdata['chargecapacityusedbytrading'] = [self.capacityofenergystorage - self.logdata.loc[i, 'chargecapacity'] if self.logdata.loc[i, 'tradingperfect'] else 0 for i in self.logdata.index]
         self.logdata['chargecapacity'] = [self.capacityofenergystorage if self.logdata.loc[i, 'tradingperfect'] else self.logdata.loc[i, 'chargecapacity'] for i in self.logdata.index]
 

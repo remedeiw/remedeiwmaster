@@ -214,7 +214,7 @@ class Agentoptimizebypricesignal(Superagent):
     # Preis sensitiver Agent erhöht die PRL Entscheidung so lange wie es den Value des Entscheidungsraums erhöht.
     # Startet mit Agent Fillforoccunpancyrate Decision
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
-        modelagent = Agent_Fillforoccupancyrate(copymodel.capacityofenergystorage)
+        modelagent = Agent_Fillforoccupancyrate()
         self.copymodel = copymodel
         self.copymodel.agent = modelagent
         if typeofdecision[:3] == "PRL":
@@ -224,6 +224,7 @@ class Agentoptimizebypricesignal(Superagent):
             value = self.copymodel.evaluaterevenuestream()[5]
             lastvalue = -100
             for i in range(0, len(decision)):
+            #for i in range(len(decision) - 1, -1, -1):
                 # while value > lastvalue:
                 while value - lastvalue > 0.005 * self.step:
                     # print(value)
@@ -232,7 +233,8 @@ class Agentoptimizebypricesignal(Superagent):
                     # print(decision[i])
                     self.copymodel.decisionhandler(index, typeofdecision, decision)
                     self.copymodel.run(ignoreprldecision=True)
-                    value = self.copymodel.evaluaterevenuestream()[5]
+                    data = self.copymodel.evaluaterevenuestream()
+                    value = data[6] + data[0] * 10
 
                 decision[i] = max(decision[i] - self.step, 0)
 

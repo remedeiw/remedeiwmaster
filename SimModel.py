@@ -116,6 +116,7 @@ class Model:
         # self.updatechargecapacity()
         # Simulation über die Zeit - Online durch For-Schleife
         for i in range(0, len(self.logdata)):
+        #for i in range(len(self.logdata) - 1, -1, -1):
             if self.logdata.loc[i, 'decisionpoint']:
 
                 # Falls die Simulation mit Noise durchgeführt wird, wird dieser vor der Entscheidung in die Logdata eingefügt und übergeben

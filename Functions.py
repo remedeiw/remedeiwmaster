@@ -94,7 +94,7 @@ def kumuliereprofile(dataframe, profilenumbers):
 
 def plot_chargecapacity(model):
     # X Achse 2. Plot neu beschriften
-    plt.figure(figsize=(16, 5))
+    plt.figure(figsize=( 16, 5))
     model.logdata['chargecapacity'].plot(color='purple')
     model.logdata['chargecapacityusedbypv'].plot(color='blue')
     model.logdata['chargecapacityusedbycontrolenergyprl'].plot(color='orange')
@@ -113,7 +113,7 @@ def plot_chargecapacity(model):
     plt.figure(figsize=(16, 5))
     plt.stackplot(model.logdata.index, model.logdata['chargecapacityusedbypv'],
     model.logdata['chargecapacityusedbycontrolenergyprl'],
-    model.logdata['chargecapacityusedbycontrolenergysrl'], model.logdata['chargecapacityusedbytrading'], labels=['PV', 'PRL', 'SRL', 'trading'],
+    model.logdata['chargecapacityusedbycontrolenergysrl'], model.logdata['chargecapacityusedbytrading'], labels=['PV', 'PRL', 'SRL', 'Trading'],
             baseline="zero")
     # plt.stackplot(model.logdata.index ,model.logdata['chargecapacityusedbycontrolenergyprl'], model.logdata['chargecapacityusedbycontrolenergysrl'], model.logdata['chargecapacityusedbypv'], labels=['PRL','SRL','PV'], baseline="zero")
     plt.axhline(y=0, color='pink')
@@ -153,6 +153,7 @@ def plot_revenuestreams(model):
     ax.bar(langs, data, color=['#2CBDFE', '#9D2EC5', 'yellow', '#47DBCD', '#F5b14C', 'red', 'darksalmon'])
     plt.xticks(rotation=20)
     plt.axhline(y=data[6], color='darksalmon')
+    plt.ylabel("Revenue Points")
     plt.show()
 
 
@@ -165,4 +166,18 @@ def plot_pricedata(model):
     plt.xticks(rotation=20)
     plt.ylabel("price in Euro/MWh")
     plt.legend()
+    plt.show()
+
+
+def plot_capacityusedbypie(model):
+    usedbypv = np.trapz(model.logdata['chargecapacityusedbypv']) / (model.capacityofenergystorage * len(model.logdata))
+    usedbysrl = np.trapz(model.logdata['chargecapacityusedbycontrolenergysrl']) / (model.capacityofenergystorage * len(model.logdata))
+    usedbyprl = np.trapz(model.logdata['chargecapacityusedbycontrolenergyprl']) / (model.capacityofenergystorage * len(model.logdata))
+    usedbytrading = np.trapz(model.logdata['chargecapacityusedbytrading']) / (model.capacityofenergystorage * len(model.logdata))
+
+    explode = (0.1, 0, 0, 0)
+    datapiechart = [usedbypv, usedbyprl, usedbysrl, usedbytrading]
+    labels = ['PV', 'PRL', 'SRL', 'Trading']
+
+    plt.pie(datapiechart, labels=labels, autopct='%1.1f%%', pctdistance=1.3, labeldistance=1.5, explode=explode)
     plt.show()

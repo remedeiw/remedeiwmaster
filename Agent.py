@@ -105,7 +105,7 @@ class Agent_Outlook(Superagent):
         # Steps von Entscheidungspunkt zu PRL Zeitscheiben
         self.prlsteps = [132, 228, 324, 420]
         # Tage die neben dem Entscheidungszeitraum mit betrachtet werden sollen
-        self.storagetime = storagetime - 1
+        self.storagetime = storagetime
 
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
         # Agent begrenzt die Ladecapazität für PV durch hörere Zuteilung zu PRL
@@ -115,25 +115,25 @@ class Agent_Outlook(Superagent):
         decision = self.occagent.get_decision(index, typeofdecision, logdata, copymodel)
         if typeofdecision == "PRL1":
             if index + self.prlsteps[1] + 192 < len(logdata):
-                data = logdata.iloc[index + self.prlsteps[0] + 48: self.find_next_sunrise(index + self.prlsteps[1] + 96 * self.storagetime, logdata)]
+                data = logdata.iloc[index + self.prlsteps[0] + 48: self.find_next_sunrise(index + self.prlsteps[0] + 96 * self.storagetime, logdata)]
                 decision[0] = decision[0] + math.floor(data['chargecapacityusedbypv'].min())
 
         if typeofdecision == "PRL2":
             if index + self.prlsteps[1] + 192 < len(logdata):
-                data = logdata.iloc[index + self.prlsteps[0] + 48: self.find_next_sunrise(index + self.prlsteps[1] + 96 * self.storagetime, logdata)]
+                data = logdata.iloc[index + self.prlsteps[0] + 48: self.find_next_sunrise(index + self.prlsteps[0] + 96 * self.storagetime, logdata)]
                 decision[0] = decision[0] + math.floor(data['chargecapacityusedbypv'].min())
 
             if index + self.prlsteps[2] + 192 < len(logdata):
-                data = logdata.iloc[index + self.prlsteps[1] + 48: self.find_next_sunrise(index + self.prlsteps[2] + 96 * self.storagetime, logdata)]
+                data = logdata.iloc[index + self.prlsteps[1] + 48: self.find_next_sunrise(index + self.prlsteps[1] + 96 * self.storagetime, logdata)]
                 decision[1] = decision[1] + math.floor(data['chargecapacityusedbypv'].min())
 
         if typeofdecision == "PRL3":
             if index + self.prlsteps[2] + 192 < len(logdata):
-                data = logdata.iloc[index + self.prlsteps[1] + 48: self.find_next_sunrise(index + self.prlsteps[2] + 96 * self.storagetime, logdata)]
+                data = logdata.iloc[index + self.prlsteps[1] + 48: self.find_next_sunrise(index + self.prlsteps[1] + 96 * self.storagetime, logdata)]
                 decision[0] = decision[0] + math.floor(data['chargecapacityusedbypv'].min())
 
             if index + self.prlsteps[3] + 192 < len(logdata):
-                data = logdata.iloc[index + self.prlsteps[2] + 48: self.find_next_sunrise(index + self.prlsteps[3] + 96 * self.storagetime, logdata)]
+                data = logdata.iloc[index + self.prlsteps[2] + 48: self.find_next_sunrise(index + self.prlsteps[2] + 96 * self.storagetime, logdata)]
                 decision[1] = decision[1] + math.floor(data['chargecapacityusedbypv'].min())
         return decision
 

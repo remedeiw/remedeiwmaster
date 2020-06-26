@@ -109,8 +109,9 @@ class Model:
 
 
     def run(self, ignoreprldecision=False, ignoresrldecision=False, showprogress=False, runwithtrading=False, runwithnoise=False):
-
-        # Berrechung für PV-Leistung und erstellen einer Copy zur übergabe
+        if showprogress:
+            print("Initialize...")
+        # Berrechnung für PV-Leistung und erstellen einer Copy zur übergabe
         self.updatecapacityusedbypv()
         modelcopy = copy.deepcopy(self)
         # self.updatechargecapacity()
@@ -181,7 +182,7 @@ class Model:
             # Positiver Netenergydemand
             # Energie wird vom Speicher bezogen
             # Falls Speicher nicht mehr voll wird der Strom vom Netz bezogen
-            # Ist der Speicher voller als die Kapazitätsgrenze, entlade Speicher ins Netz (feed in grid)
+            # Ist der Speicher voller als die Kapazitätsgrenze, entlade Speicher ins Netz (feed in grid, entsteht durch neue Regelenergie)
             if self.logdata.iloc[i]['netenergydemand'] > 0:
                 self.logdata.loc[i, 'drawfromgrid'] = max(
                     self.logdata.iloc[i]['netenergydemand'] - self.logdata.iloc[i - 1]['chargecapacityusedbypv'], 0)
@@ -318,7 +319,7 @@ class Model:
         productsneg = ['NEG_00_04', 'NEG_04_08', 'NEG_08_12', 'NEG_12_16', 'NEG_16_20', 'NEG_20_24']
 
         # Schleife mit Step 4*4 = 16 ( 4 Stunden - eine SRL Zeitscheibe) läuft über Simulation und multipliziert bereitgestellte SRL
-        # mit deren Preis
+        # mit deren Preis, bei 15 min erbringung mit 1 MW Leistung
         # Manipulierung des timestamps falls Preisdaten nicht aus selben Jahr wie timestamp der Simulatuion
         for counter, i in enumerate(range(0, len(self.logdata), 16)):
             timestamp = self.logdata.loc[i, 'timestamp']

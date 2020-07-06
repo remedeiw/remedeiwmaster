@@ -154,13 +154,14 @@ class Agent(Superagent):
         # Ist es kein sonniger Tag, so wird die Storagetime für den voheriegen erhöht.
         #
         agent = Agent_Outlook(1)
-
+        decision = agent.get_decision(index, typeofdecision, logdata, copymodel)
         if typeofdecision == "PRL1":
             if index + self.prlsteps[1] + 192 < len(logdata):
                 if self.is_sunny_day(self.find_next_sunrise(index + self.prlsteps[1], logdata), self.find_next_sunrise(index + self.prlsteps[1] + 96, logdata), logdata):
                     agent.storagetime = 1
                 else:
                     agent.storagetime = 2
+            decision = agent.get_decision(index, typeofdecision, logdata, copymodel)
 
         if typeofdecision == "PRL2":
             if index + self.prlsteps[1] + 192 < len(logdata):
@@ -168,25 +169,33 @@ class Agent(Superagent):
                     agent.storagetime = 1
                 else:
                     agent.storagetime = 2
+            decision1 = agent.get_decision(index, typeofdecision, logdata, copymodel)
             if index + self.prlsteps[2] + 192 < len(logdata):
                 if self.is_sunny_day(self.find_next_sunrise(index + self.prlsteps[2], logdata), self.find_next_sunrise(index + self.prlsteps[2] + 96, logdata), logdata):
                     agent.storagetime = 1
                 else:
                     agent.storagetime = 2
+            decision2 = agent.get_decision(index, typeofdecision, logdata, copymodel)
+            decision = decision1
+            decision[1] = decision2[1]
         if typeofdecision == "PRL3":
             if index + self.prlsteps[2] + 192 < len(logdata):
                 if self.is_sunny_day(self.find_next_sunrise(index + self.prlsteps[2], logdata), self.find_next_sunrise(index + self.prlsteps[2] + 96, logdata), logdata):
                     agent.storagetime = 1
                 else:
                     agent.storagetime = 2
+            decision1 = agent.get_decision(index, typeofdecision, logdata, copymodel)
             if index + self.prlsteps[3] + 192 < len(logdata):
                 if self.is_sunny_day(self.find_next_sunrise(index + self.prlsteps[3], logdata), self.find_next_sunrise(index + self.prlsteps[3] + 96, logdata), logdata):
                     agent.storagetime = 1
                 else:
                     agent.storagetime = 2
+            decision2 = agent.get_decision(index, typeofdecision, logdata, copymodel)
+            decision = decision1
+            decision[1] = decision2[1]
 
 
-        decision = agent.get_decision(index, typeofdecision, logdata, copymodel)
+
 
         return decision
 

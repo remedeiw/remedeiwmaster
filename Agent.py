@@ -22,7 +22,7 @@ class Agentonlypv(Superagent):
 
 
 class Agent_manualinput(Superagent):
-    # Agent manualinput ermöglich einen manuellen input für jede Entscheidung während der Laufzeit
+    # Agent manualinput ermöglicht einen manuellen Input für jede Entscheidung während der Laufzeit
     def get_decision(self, index, typeofdecision, logdata, copymodel):
         if typeofdecision == "SRL":
             eingabe1 = int(input(str(index) + " 00_04 " + str(typeofdecision)))
@@ -59,7 +59,7 @@ class Agent_Fillforoccupancyrate(Superagent):
 
 
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
-        # Zieht maximalen Ladestand im Entscheigungszeitraum von der Speicher Kapazität ab und gibt den minimale freie Kapazität zurück
+        # Zieht maximalen Ladestand im Entscheidungszeitraum von der Speicherkapazität ab und gibt die minimale freie Kapazität zurück
         self.capacityofenergystorage = copymodel.capacityofenergystorage
         if typeofdecision == "SRL" and index + self.srlsteps[6] < len(logdata):
             decision = [0, 0, 0, 0, 0, 0]
@@ -108,10 +108,9 @@ class Agent_Outlook(Superagent):
         self.storagetime = storagetime
 
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
-        # Agent begrenzt die Ladecapazität für PV durch hörere Zuteilung zu PRL
-        # Es soll nur so viel PV geladen werden das es gerade aufgebraucht wird bis zum nächsten Sonnenaufgang
-        # Über den Parameter "Storagetime" kann festgelegt werden wie viele Tage vorraus geschaut werden sollen.
-        # Bei Storagetime = 2 wird nicht nur der Tag der eigentlichen Entscheidung sonder auch der daneben betrachtet
+        # Agent begrenzt die Ladekapazität für PV durch hörere Zuteilung zu PRL
+        # Es soll nur so viel PV geladen werden, dass es gerade aufgebraucht wird bis zum nächsten Sonnenaufgang
+        # Über den Parameter "Storagetime" kann festgelegt werden wie viele Tage voraus geschaut werden soll.
         decision = self.occagent.get_decision(index, typeofdecision, logdata, copymodel)
         if typeofdecision == "PRL1":
             if index + self.prlsteps[1] + 192 < len(logdata):
@@ -151,7 +150,7 @@ class Agent(Superagent):
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
         #
         # Agent überprüft den Tag nach dem Entscheidungszeitraum.
-        # Ist es kein sonniger Tag, so wird die Storagetime für den voheriegen erhöht.
+        # Ist es kein sonniger Tag, so wird die Storagetime für den vorherigen erhöht.
         #
         agent = Agent_Outlook(1)
         decision = agent.get_decision(index, typeofdecision, logdata, copymodel)
@@ -220,7 +219,7 @@ class Agentoptimizebypricesignal(Superagent):
         self.step = step
 
     # Experimental
-    # Preis sensitiver Agent erhöht die PRL Entscheidung so lange wie es den Value des Entscheidungsraums erhöht.
+    # Preissensitiver Agent erhöht die PRL Entscheidung so lange wie es den Value des Entscheidungsraums erhöht.
     # Startet mit Agent Fillforoccunpancyrate Decision
     def get_decision(self, index, typeofdecision, logdata, copymodel: SimModel.Model):
         modelagent = Agent_Fillforoccupancyrate()

@@ -6,17 +6,17 @@ import noise
 import random
 
 '''
-Die Klasse Model dient zur Simulation. 
+Die Klasse SimModel dient zur Simulation. 
 
 __init__
-Der Kinstruktor übergibt alle relevante Datensätze und erstellt eine Logdatei. In der Logdateil sollen während der
+Der Konstruktor übergibt alle relevanten Datensätze und erstellt eine Logdatei. In der Logdatei sollen während der
 Simulation alle Werte berechnet werden und direkt die Logdatei geschrieben werden.
 
 run
 Die run Methode soll verwendet werden um die Simulation durchzuführen.
 
 updatecapacityusedbypv
-update das dataframe mit dem input pvleistung und lastprofil im bezug auf verwendeten speicher
+update das dataframe mit dem input pvleistung und lastprofil in Bezug auf verwendeten Speicher
 
 updatechargecapacity
 berechnet die Chargecapacity
@@ -31,13 +31,13 @@ cutlogdatei
 kürzt die Logdatei und optional auch die Strompreise
 
 evaluaterevenuestream
-bewertet die logdatei nach selfconsumotion, endladestand der Baterie, feed in grid, Srl, PRL, Trading
+bewertet die logdatei nach selfconsumotion, Endladestand der Baterie, feed in grid, Srl, PRL, Trading
 
 def noise
-added noise - gaussian oder perlin - Parameter für kurze und lange vorraussage
+added noise - gaussian oder perlin - Parameter für kurze und lange Vorrausage
 
 add trading
-füge nach Simulation Trading in die Lücken, im code änderbare Trading strategie - perfekte vorraussicht
+füge nach Simulation Trading in die Lücken, im code änderbare Trading strategie - perfekte Vorraussicht
 
 Spalten der Logdatei:
 
@@ -111,7 +111,7 @@ class Model:
     def run(self, ignoreprldecision=False, ignoresrldecision=False, showprogress=False, runwithtrading=False, runwithnoise=False):
         if showprogress:
             print("Initialize...")
-        # Berrechnung für PV-Leistung und erstellen einer Copy zur übergabe
+        # Berechnung für PV-Leistung und Erstellen einer Copy zur Übergabe
         self.updatecapacityusedbypv()
         modelcopy = copy.deepcopy(self)
         # self.updatechargecapacity()
@@ -128,7 +128,7 @@ class Model:
                         logdatacopy['energydemandnopv'] = logdatacopy['energydemandnopv'] * (logdatacopy['errorlastshort'] + 1)
                         logdatacopy['netenergydemand'] = logdatacopy['energydemandnopv'] - logdatacopy['pvpower']
 
-                        # neuberechnung der Capacity im CopyModel zur übergabe
+                        # Neuberechnung der Capacity im CopyModel zur Übergabe
                         modelcopy.logdata = logdatacopy
                         modelcopy.updatecapacityusedbypv()
                         logdatacopy = modelcopy.logdata
@@ -137,7 +137,7 @@ class Model:
                         logdatacopy['energydemandnopv'] = logdatacopy['energydemandnopv'] * (logdatacopy['errorlastlong'] + 1)
                         logdatacopy['netenergydemand'] = logdatacopy['energydemandnopv'] - logdatacopy['pvpower']
 
-                        # neuberechnung der Capacity im CopyModel zur übergabe
+                        # Neuberechnung der Capacity im CopyModel zur Übergabe
                         modelcopy.logdata = logdatacopy
                         modelcopy.updatecapacityusedbypv()
                         logdatacopy = modelcopy.logdata
@@ -176,12 +176,12 @@ class Model:
         self.logdata['drawfromgrid'] = 0
         self.logdata['feedingrid'] = 0
 
-        # Fall unterscheidung pv größer Bedarf vs kleiner >> Anpassung Speicher und +- Grid
+        # Fallunterscheidung pv größer Bedarf vs kleiner >> Anpassung Speicher und +- Grid
         for i in range(0, len(self.logdata)):
 
             # Positiver Netenergydemand
             # Energie wird vom Speicher bezogen
-            # Falls Speicher nicht mehr voll wird der Strom vom Netz bezogen
+            # Falls Speicher nicht mehr voll - wird der Strom vom Netz bezogen
             # Ist der Speicher voller als die Kapazitätsgrenze, entlade Speicher ins Netz (feed in grid, entsteht durch neue Regelenergie)
             if self.logdata.iloc[i]['netenergydemand'] > 0:
                 self.logdata.loc[i, 'drawfromgrid'] = max(
@@ -221,7 +221,7 @@ class Model:
 
     def setdecisionpoint(self):
         # Setzen der Entscheidungspunkte in Logdata
-        # einzelne Steplängen 96 für Tag 672 für Woche
+        # einzelne Steplängen 96 für Tag, 672 für Woche
         # 32, 60, 156 .... Zeitpunkt der ersten Entscheidung
         nextsrl, nextprlmon, nextprltue, nextprlwed, nextprlthu, nextprlfri = 32, 60, 156, 252, 348, 444
         for i in range(0, len(self.logdata)):
@@ -256,7 +256,7 @@ class Model:
         # Anschließend wird der Wert in die Logdatei geschrieben.
         # Die Grenzen entsprechen immer den Start sowie den Endzeitpunkt des relevanten Bereichs
         # Bsp: PRL1 Entscheidungen sind für einen Zeitraum der 132 Simulationsschritte in der Zukunft liegt und nach 24h vorbei ist
-        # 24h* 4 (viertel stunden) = 96             132 + 96 = 228
+        # 24h* 4 (viertelstunden) = 96             132 + 96 = 228
         if decisiontype == 'SRL':
             if index + 80 < len(self.logdata):
                 for i in range(index + 64, index + 80):
@@ -303,7 +303,7 @@ class Model:
     def evaluaterevenuestream(self):
         self.logdata = self.logdata.reset_index(drop=True)
         self.pricedata = self.pricedata.reset_index(drop=True)
-    # Simple berechnung für SelfConsumption, feedingrid, chargecapacity
+    # Simple Berechnung für SelfConsumption, feedingrid, chargecapacity
     # kumulierte Summen werden gewichtet
         self.logdata['drawfromgridcumsum'] = self.logdata['drawfromgrid'].cumsum()
         self.logdata['feedingridcumsum'] = self.logdata['feedingrid'].cumsum()
@@ -319,11 +319,11 @@ class Model:
         productsneg = ['NEG_00_04', 'NEG_04_08', 'NEG_08_12', 'NEG_12_16', 'NEG_16_20', 'NEG_20_24']
 
         # Schleife mit Step 4*4 = 16 ( 4 Stunden - eine SRL Zeitscheibe) läuft über Simulation und multipliziert bereitgestellte SRL
-        # mit deren Preis, bei 15 min erbringung mit 1 MW Leistung
-        # Manipulierung des timestamps falls Preisdaten nicht aus selben Jahr wie timestamp der Simulatuion
+        # mit deren Preis, bei 15 min Erbringung mit 1 MW Leistung
+        # Manipulierung des timestamps falls Preisdaten nicht aus selben Jahr wie timestamp der Simulation
         for counter, i in enumerate(range(0, len(self.logdata), 16)):
             timestamp = self.logdata.loc[i, 'timestamp']
-            # ANSPASSUNG: Hier wird die Jahreszahl des Zeittempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
+            # ANSPASSUNG: Hier wird die Jahreszahl des Zeitstempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
             # Aktueller Datensatz Preise von 2019.
             timestamp = '2019' + timestamp[4:10]
             product = productsneg[counter % 6]
@@ -337,14 +337,14 @@ class Model:
         # Manipulierung des timestamps falls Preisdaten nicht aus selben Jahr wie timestamp der Simulatuion
         for counter, i in enumerate(range(0, len(self.logdata), 4 * 24)):
             timestamp = self.logdata.loc[i, 'timestamp']
-            # ANSPASSUNG: Hier wird die Jahreszahl des Zeittempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
+            # ANSPASSUNG: Hier wird die Jahreszahl des Zeitstempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
             # Aktueller Datensatz Preise von 2019.
             timestamp = '2019' + timestamp[4:10]
             valueprlcontrolenergy = valueprlcontrolenergy + self.datafcr.loc[timestamp]['DE_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'] / 250 / 2 * \
                                     self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl']
 
         valuetrading = 0
-        # Kumulierte Summe, falls Energie gehalten wird - multipliziert mit Return auf viertelstunden basis
+        # Kummulierte Summe, falls Energie gehalten wird - multipliziert mit Return auf viertelstunden Basis
         if self.logdata['chargecapacityusedbytrading'].sum() > 0:
             for i in range(len(self.logdata)):
                 valuetrading = valuetrading + self.logdata.loc[i, 'chargecapacityusedbytrading'] * self.pricedata.loc[i, 'pricediff'] / 1000 # umrechnung in kwh

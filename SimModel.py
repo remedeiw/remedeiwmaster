@@ -355,6 +355,67 @@ class Model:
 
         return [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy, valueprlcontrolenergy, valuetrading, valuesumme]
 
+
+    def evaluaterevenuestream_workaround(self, chargingvoltage):
+    # Workaround um zuvor nicht betrachtete Ladeleistungseinschränkung in der Bewertung SRL und PRL zu berücksichtigen
+        self.logdata = self.logdata.reset_index(drop=True)
+        self.pricedata = self.pricedata.reset_index(drop=True)
+    # Simple Berechnung für SelfConsumption, feedingrid, chargecapacity
+    # kumulierte Summen werden gewichtet
+        self.logdata['drawfromgridcumsum'] = self.logdata['drawfromgrid'].cumsum()
+        self.logdata['feedingridcumsum'] = self.logdata['feedingrid'].cumsum()
+        totalenergydemand = self.logdata['energydemandnopv'].sum()
+        # Gewichtung 0.30 Euro / kwh
+        valueselfconsumption = (totalenergydemand - self.logdata['drawfromgrid'].sum()) * 0.30
+        # Gewichtung 0.10 Euro / kwh
+        valuefeedingrid = self.logdata['feedingrid'].sum() * 0.10
+        # Gewichtung 0.30 Euro / kwh
+        valuechargecapacity = self.logdata.loc[len(self.logdata) - 1]['chargecapacityusedbypv'] * 0.30
+
+        valuesrlcontrolenergy = 0
+        productsneg = ['NEG_00_04', 'NEG_04_08', 'NEG_08_12', 'NEG_12_16', 'NEG_16_20', 'NEG_20_24']
+        productspos = ['POS_00_04', 'POS_04_08', 'POS_08_12', 'POS_12_16', 'POS_16_20', 'POS_20_24']
+
+
+        # Schleife mit Step 4*4 = 16 ( 4 Stunden - eine SRL Zeitscheibe) läuft über Simulation und multipliziert bereitgestellte SRL
+        # mit deren Preis, bei 15 min Erbringung mit 1 MW Leistung
+        # Manipulierung des timestamps falls Preisdaten nicht aus selben Jahr wie timestamp der Simulation
+        for counter, i in enumerate(range(0, len(self.logdata), 16)):
+            timestamp = self.logdata.loc[i, 'timestamp']
+            # ANSPASSUNG: Hier wird die Jahreszahl des Zeitstempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
+            # Aktueller Datensatz Preise von 2019.
+            timestamp = '2019' + timestamp[4:10]
+            productpos = productspos[counter % 6]
+            productneg = productsneg[counter % 6]
+            valuesrlcontrolenergy = valuesrlcontrolenergy + max(0, (self.dataafrr.loc[timestamp, productneg]['TOTAL_AVERAGE_CAPACITY_PRICE_[EUR/MW]'] + self.dataafrr.loc[timestamp, productpos]['TOTAL_AVERAGE_CAPACITY_PRICE_[EUR/MW]']) / 2 / 250 * min(self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'], chargingvoltage / 2 - self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl']))
+
+        valueprlcontrolenergy = 0
+
+        # Schleife mit Step 4 * 24  ( 24 Stunden - eine PRL Zeitscheibe) läuft über Simulation und multipliziert bereitgestellte PRL
+        # mit deren Preis
+        # Manipulierung des timestamps falls Preisdaten nicht aus selben Jahr wie timestamp der Simulatuion
+        for counter, i in enumerate(range(0, len(self.logdata), 4 * 24)):
+            timestamp = self.logdata.loc[i, 'timestamp']
+            # ANSPASSUNG: Hier wird die Jahreszahl des Zeitstempels manipuliert. Nicht notwendig falls Daten aus selben Jahr.
+            # Aktueller Datensatz Preise von 2019.
+            timestamp = '2019' + timestamp[4:10]
+
+            # Bei symetrischer Aussreibung reichen 200 kw um 100kWh Regelleistung bereitzustellen. Entladung 50 kWh in 15 min
+            valueprlcontrolenergy = valueprlcontrolenergy + self.datafcr.loc[timestamp]['DE_SETTLEMENTCAPACITY_PRICE_[EUR/MW]'] / 250 / 2 * min(self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'], chargingvoltage / 2)
+
+        valuetrading = 0
+        # Kummulierte Summe, falls Energie gehalten wird - multipliziert mit Return auf viertelstunden Basis
+        if self.logdata['chargecapacityusedbytrading'].sum() > 0:
+            for i in range(len(self.logdata)):
+                valuetrading = valuetrading + self.logdata.loc[i, 'chargecapacityusedbytrading'] * self.pricedata.loc[i, 'pricediff'] / 1000 # umrechnung in kwh
+
+        valuesumme = valueprlcontrolenergy + valuesrlcontrolenergy + valuefeedingrid + valuechargecapacity + valueselfconsumption + valuetrading
+        self.valuedata = [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy, valueprlcontrolenergy, valuetrading, valuesumme]
+
+
+        return [valueselfconsumption, valuechargecapacity, valuefeedingrid, valuesrlcontrolenergy, valueprlcontrolenergy, valuetrading, valuesumme]
+
+
     def def_noise(self, typeofnoice, stdlongpv, stdshortpv, stdlonglast, stdshortlast, logdata):
 
         # Langer Fehler muss größer sein als kurzer

@@ -92,6 +92,31 @@ def kumuliereprofile(dataframe, profilenumbers):
     return dataframe
 
 
+def plot_realchargestate(model, SRLFaktor=0.5, includetrading = False):
+    if includetrading:
+        model.logdata['realchargecapacity'] = model.logdata['chargecapacityusedbypv'] + model.logdata['chargecapacityusedbycontrolenergyprl'] * 0.5 + model.logdata['chargecapacityusedbycontrolenergysrl'] * SRLFaktor + model.logdata['chargecapacityusedbytrading'].plot(color='red')
+    else:
+        model.logdata['realchargecapacity'] = model.logdata['chargecapacityusedbypv'] + model.logdata[
+            'chargecapacityusedbycontrolenergyprl'] * 0.5 + model.logdata['chargecapacityusedbycontrolenergysrl'] * SRLFaktor
+    # X Achse 2. Plot neu beschriften
+    plt.figure(figsize=( 16, 5))
+    model.logdata['chargecapacity'].plot(color='purple')
+    model.logdata['chargecapacityusedbypv'].plot(color='blue')
+    model.logdata['chargecapacityusedbycontrolenergyprl'].plot(color='orange')
+    model.logdata['chargecapacityusedbycontrolenergysrl'].plot(color='green')
+    model.logdata['chargecapacityusedbytrading'].plot(color='red')
+    model.logdata['realchargecapacity'].plot(color='black')
+    #legend = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    legend = plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2),
+               ncol=3)
+    plt.axhline(y=0, color='pink')
+    plt.axhline(y=model.capacityofenergystorage, color='pink')
+    plt.xticks(rotation=15)
+    plt.ylabel('Charge Capacity in kwh')
+    locs, labels = plt.xticks()
+    labels = labels[1:]
+
+
 def plot_chargecapacity(model):
     # X Achse 2. Plot neu beschriften
     plt.figure(figsize=( 16, 5))

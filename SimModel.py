@@ -68,7 +68,7 @@ feedingridcumsum - kumulierte summe
 
 class Model:
     def __init__(self, dataloadprofiles, listoflastprofiles, dataafrr, datafcr, pricedata, pvdata, numberofhouseswithpv, capacityofpvs,
-                 capacityofenergystorage, agent):
+                 capacityofenergystorage, chargingvoltage, agent):
         self.pricedata = pricedata
         self.agent = agent
         self.listoflastprofiles = listoflastprofiles
@@ -82,6 +82,7 @@ class Model:
         self.datafcr = datafcr
         self.pvdata = pvdata
         self.capacityofenergystorage = capacityofenergystorage
+        self.chargingvoltage = chargingvoltage
         self.valuedata = 0
 
         #Erstellen der LogData
@@ -183,12 +184,20 @@ class Model:
             # Energie wird vom Speicher bezogen
             # Falls Speicher nicht mehr voll - wird der Strom vom Netz bezogen
             # Ist der Speicher voller als die Kapazitätsgrenze, entlade Speicher ins Netz (feed in grid, entsteht durch neue Regelenergie)
+
             if self.logdata.iloc[i]['netenergydemand'] > 0:
+
                 self.logdata.loc[i, 'drawfromgrid'] = max(
                     self.logdata.iloc[i]['netenergydemand'] - self.logdata.iloc[i - 1]['chargecapacityusedbypv'], 0)
                 self.logdata.loc[i, 'chargecapacityusedbypv'] = max(
                     self.logdata.iloc[i - 1]['chargecapacityusedbypv'] - self.logdata.iloc[i]['netenergydemand'], 0)
                 self.logdata.loc[i, 'feedingrid'] = 0
+
+                if self.logdata.iloc[i - 1]['chargecapacityusedbypv'] - self.logdata.iloc[i]['chargecapacityusedbypv'] > self.chargingvoltage / 4:
+                    excess = (self.logdata.iloc[i - 1]['chargecapacityusedbypv'] - self.logdata.iloc[i]['chargecapacityusedbypv']) - (self.chargingvoltage / 4)
+                    self.logdata.loc[i, 'chargecapacityusedbypv'] = self.logdata.loc[i, 'chargecapacityusedbypv'] + excess
+                    self.logdata.loc[i, 'drawfromgrid'] = self.logdata.loc[i, 'drawfromgrid'] + excess
+
                 if self.logdata.loc[i, 'chargecapacityusedbypv'] + self.logdata.loc[
                     i, 'chargecapacityusedbycontrolenergyprl'] + self.logdata.loc[
                     i, 'chargecapacityusedbycontrolenergysrl'] > self.capacityofenergystorage:
@@ -212,6 +221,12 @@ class Model:
                     self.capacityofenergystorage - self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] -
                     self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'])
                 self.logdata.loc[i, 'drawfromgrid'] = 0
+
+                if abs(self.logdata.iloc[i - 1]['chargecapacityusedbypv'] - self.logdata.iloc[i]['chargecapacityusedbypv']) > self.chargingvoltage / 4:
+                    excess = abs(self.logdata.iloc[i - 1]['chargecapacityusedbypv'] - self.logdata.iloc[i]['chargecapacityusedbypv']) - (self.chargingvoltage / 4)
+                    self.logdata.loc[i, 'chargecapacityusedbypv'] = self.logdata.loc[i, 'chargecapacityusedbypv'] - excess
+                    self.logdata.loc[i, 'feedingrid'] = self.logdata.loc[i, 'feedingrid'] + excess
+
 
 
     def updatechargecapacity(self):
@@ -260,40 +275,43 @@ class Model:
         if decisiontype == 'SRL':
             if index + 80 < len(self.logdata):
                 for i in range(index + 64, index + 80):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = reply[0]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = min(reply[0], self.chargingvoltage / 2 - self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'])
             if index + 96 < len(self.logdata):
                 for i in range(index + 80, index + 96):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = reply[1]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = min(reply[1], self.chargingvoltage / 2 - self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'])
             if index + 112 < len(self.logdata):
                 for i in range(index + 96, index + 112):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = reply[2]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = min(reply[2],  self.chargingvoltage / 2 - self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'])
             if index + 128 < len(self.logdata):
                 for i in range(index + 112, index + 128):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = reply[3]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = min(reply[3],  self.chargingvoltage / 2 - self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'])
             if index + 144 < len(self.logdata):
                 for i in range(index + 128, index + 144):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = reply[4]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = min(reply[4],  self.chargingvoltage / 2 - self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'])
             if index + 160 < len(self.logdata):
                 for i in range(index + 144, index + 160):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = reply[5]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergysrl'] = min(reply[5],  self.chargingvoltage / 2 - self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'])
+
         if decisiontype == 'PRL1':
             if index + 228 < len(self.logdata):
                 for i in range(index + 132, index + 228):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = reply[0]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = min(reply[0], self.chargingvoltage / 2)
+
         if decisiontype == 'PRL2':
             if index + 228 < len(self.logdata):
                 for i in range(index + 132, index + 228):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = reply[0]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = min(reply[0], self.chargingvoltage / 2)
             if index + 324 < len(self.logdata):
                 for i in range(index + 228, index + 324):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = reply[1]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = min(reply[1], self.chargingvoltage / 2)
+
         if decisiontype == 'PRL3':
             if index + 324 < len(self.logdata):
                 for i in range(index + 228, index + 324):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = reply[0]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = min(reply[0], self.chargingvoltage / 2)
             if index + 420 < len(self.logdata):
                 for i in range(index + 324, index + 420):
-                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = reply[1]
+                    self.logdata.loc[i, 'chargecapacityusedbycontrolenergyprl'] = min(reply[1], self.chargingvoltage / 2)
 
     def cutlogdatei(self, start=192, end=289, includepricedatafortrading=False):
         self.logdata = self.logdata.loc[start:len(self.logdata) - end]
@@ -489,5 +507,14 @@ class Model:
         self.logdata['tradingperfect'] = [True if pricedata['direction'].loc[i] == 1 else False for i in pricedata.index]
         # Freie Kapazitäten werden verwendet falls ein perfekter Händler Strom halten würde
         self.logdata['chargecapacityusedbytrading'] = [self.capacityofenergystorage - self.logdata.loc[i, 'chargecapacity'] if self.logdata.loc[i, 'tradingperfect'] else 0 for i in self.logdata.index]
-        self.logdata['chargecapacity'] = [self.capacityofenergystorage if self.logdata.loc[i, 'tradingperfect'] else self.logdata.loc[i, 'chargecapacity'] for i in self.logdata.index]
+        for i in range(0, len(self.logdata)):
+            if abs(self.logdata.iloc[i-1]['chargecapacityusedbytrading'] + self.logdata.iloc[i-1]['chargecapacityusedbypv'] - self.logdata.iloc[i]['chargecapacityusedbytrading'] - self.logdata.iloc[i]['chargecapacityusedbypv']) > self.chargingvoltage / 4:
+                if self.logdata.iloc[i]['chargecapacityusedbytrading'] - self.logdata.iloc[i-1]['chargecapacityusedbytrading'] > 0:
+                    self.logdata.loc[i, 'chargecapacityusedbytrading'] = self.logdata.iloc[i-1]['chargecapacityusedbytrading'] + self.chargingvoltage / 4 - (self.logdata.iloc[i]['chargecapacityusedbypv'] - self.logdata.iloc[i-1]['chargecapacityusedbypv'])
+                    self.logdata.loc[i, 'chargecapacityusedbytrading'] = min(self.logdata.loc[i, 'chargecapacityusedbytrading'], self.capacityofenergystorage - self.logdata.iloc[i]['chargecapacityusedbypv'] - self.logdata.iloc[i]['chargecapacityusedbycontrolenergyprl'] - self.logdata.iloc[i]['chargecapacityusedbycontrolenergysrl'])
+                else:
+                    self.logdata.loc[i, 'chargecapacityusedbytrading'] = self.logdata.iloc[i-1]['chargecapacityusedbytrading'] - self.chargingvoltage / 4 + (self.logdata.iloc[i]['chargecapacityusedbypv'] - self.logdata.iloc[i-1]['chargecapacityusedbypv'])
+                    self.logdata.loc[i, 'chargecapacityusedbytrading'] = min(self.logdata.loc[i, 'chargecapacityusedbytrading'], self.capacityofenergystorage - self.logdata.iloc[i]['chargecapacityusedbypv'] - self.logdata.iloc[i]['chargecapacityusedbycontrolenergyprl'] - self.logdata.iloc[i]['chargecapacityusedbycontrolenergysrl'])
+
+
 

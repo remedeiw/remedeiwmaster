@@ -94,7 +94,7 @@ def kumuliereprofile(dataframe, profilenumbers):
 
 def plot_realchargestate(model, SRLFaktor=0.5, includetrading = False):
     if includetrading:
-        model.logdata['realchargecapacity'] = model.logdata['chargecapacityusedbypv'] + model.logdata['chargecapacityusedbycontrolenergyprl'] * 0.5 + model.logdata['chargecapacityusedbycontrolenergysrl'] * SRLFaktor + model.logdata['chargecapacityusedbytrading'].plot(color='red')
+        model.logdata['realchargecapacity'] = model.logdata['chargecapacityusedbypv'] + model.logdata['chargecapacityusedbycontrolenergyprl'] * 0.5 + model.logdata['chargecapacityusedbycontrolenergysrl'] * SRLFaktor + model.logdata['chargecapacityusedbytrading']
     else:
         model.logdata['realchargecapacity'] = model.logdata['chargecapacityusedbypv'] + model.logdata[
             'chargecapacityusedbycontrolenergyprl'] * 0.5 + model.logdata['chargecapacityusedbycontrolenergysrl'] * SRLFaktor
@@ -115,6 +115,13 @@ def plot_realchargestate(model, SRLFaktor=0.5, includetrading = False):
     plt.ylabel('Charge Capacity in kwh')
     locs, labels = plt.xticks()
     labels = labels[1:]
+
+    load = 0
+    for i in range(0, len(model.logdata)):
+        if model.logdata.iloc[i-1]['realchargecapacity'] < model.logdata.iloc[i]['realchargecapacity']:
+            load = load + model.logdata.iloc[i]['realchargecapacity'] - model.logdata.iloc[i-1]['realchargecapacity']
+    print(load)
+    print(load/model.capacityofenergystorage)
 
 
 def plot_chargecapacity(model):

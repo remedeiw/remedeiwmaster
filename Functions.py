@@ -120,7 +120,7 @@ def plot_realchargestate(model, SRLFaktor=0.5, includetrading = False):
     for i in range(0, len(model.logdata)):
         if model.logdata.iloc[i-1]['realchargecapacity'] < model.logdata.iloc[i]['realchargecapacity']:
             load = load + model.logdata.iloc[i]['realchargecapacity'] - model.logdata.iloc[i-1]['realchargecapacity']
-    print(load)
+    #print(load)
     print(load/model.capacityofenergystorage)
 
 
